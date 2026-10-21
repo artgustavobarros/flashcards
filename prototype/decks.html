@@ -1,0 +1,1283 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Decks, Labels e Comments".
+  Pergunta: como a pessoa organiza os Cards? Lista de Decks, aba Cards (busca, filtros, seleção em massa,
+  gestão de Labels), detalhe do Deck e detalhe do Card com os Comments em lista cronológica.
+  Decisão: variante "Pilha". Cada nível é uma página (Decks → Deck → Card), com "voltar" no topo.
+  Busca + filtros em chips com menu (Deck, Label, Estado, "Vencido hoje"); seleção vira barra no topo da lista.
+  Labels numa página própria (pelo menu do chip Label). Comments em lista cronológica no fim do Card.
+  As variantes descartadas estão no branch prototype/decks-labels-comments.
+  Parâmetros: ?tela=decks|cards|deck · ?deck=<id> · ?card=<id> · ?q=<busca> · ?dados=cheio|vazio
+              · ?tema=claro|escuro · ?frame=mobile.
+  Ticket "Edição e reinício nos protótipos": "Reiniciar agendamento" no "⋯" do Card com Rating (com Desfazer).
+  Card reiniciado: ?tela=deck&deck=ingles&card=lookafter. "Editar" abre o editor com este Card e volta
+  para cá com "Card salvo." (?salvo=1). As edições ficam só nesta aba (sessionStorage, chave daruma:edicoes).
+  Base: prototype/fundacao-visual.html (tokens, shell, componentes). Dados falsos, nada é salvo.
+  Hoje = qua, 21 out 2026.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Decks · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+  input[type=search]::-webkit-search-cancel-button { display: none; }
+  mark { background: hsl(var(--warning) / .22); color: inherit; border-radius: 4px; padding: 0 .1em; }
+  .rt { overflow-wrap: anywhere; }
+  .rt b, .rt strong { font-weight: 650; }
+  .rt ul { list-style: disc; padding-left: 1.25rem; }
+  .rt code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: hsl(var(--muted)); padding: .1em .35em; border-radius: 6px; }
+  .rt pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8em; background: hsl(var(--muted)); padding: .75rem .9rem; border-radius: 10px; white-space: pre-wrap; margin: .5rem 0; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher"></div>
+
+<script>
+/* ---------- estado ---------- */
+const P = new URLSearchParams(location.search);
+const ESTADOS = { novo: 'Novo', aprendizado: 'Em aprendizado', maduro: 'Maduro' };
+const S = {
+  dados: P.get('dados') === 'vazio' ? 'vazio' : 'cheio',
+  tela: ['decks', 'cards', 'deck'].includes(P.get('tela')) ? P.get('tela') : 'decks',
+  deckId: P.get('deck') || null,
+  cardId: P.get('card') || null,
+  q: P.get('q') || '',
+  f: { deck: null, label: null, estado: null, hoje: false },
+  sel: [], selMode: false,
+  labelsPage: P.get('labels') === '1',
+  open: null, modal: null, mq: '', rn: null, draft: '', editIdx: null, editTxt: '',
+  tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
+  frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
+  embed: P.get('embed') === '1',
+  email: P.get('email') === 'pendente',
+  toasts: [], focusKey: null, focusPos: null,
+};
+let toastId = 0;
+
+function params(extra = {}) {
+  const p = new URLSearchParams({ tela: S.tela, dados: S.dados, tema: S.tema });
+  if (S.deckId) p.set('deck', S.deckId);
+  if (S.cardId) p.set('card', S.cardId);
+  if (S.q) p.set('q', S.q);
+  Object.entries(extra).forEach(([k, v]) => p.set(k, v));
+  return p;
+}
+function syncURL() {
+  const p = params();
+  if (S.email) p.set('email', 'pendente');
+  if (S.frame === 'mobile') p.set('frame', 'mobile');
+  if (S.embed) p.set('embed', '1');
+  history.replaceState(null, '', '?' + p);
+}
+
+/* ---------- dados falsos ---------- */
+const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const dayOf = (off) => new Date(2026, 9, 21 + off);
+const fmt = (d) => `${d.getDate()} ${MES[d.getMonth()]}`;
+
+const IMG = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" fill="#d4d4d8"/><rect x="146" y="20" width="28" height="140" rx="14" fill="#a1a1aa"/><circle cx="160" cy="26" r="20" fill="#a1a1aa"/><circle cx="160" cy="154" r="20" fill="#a1a1aa"/><circle cx="160" cy="26" r="26" fill="none" stroke="#16a34a" stroke-width="4"/></svg>');
+let DECKS = [
+  { id: 'anatomia', n: 'Anatomia humana' },
+  { id: 'ingles', n: 'Inglês: phrasal verbs' },
+  { id: 'js', n: 'JavaScript' },
+  { id: 'historia', n: 'História do Brasil' },
+  { id: 'quimica', n: 'Química orgânica' },
+];
+let LABELS = [
+  { id: 'musculos', n: 'músculos' }, { id: 'ossos', n: 'ossos' }, { id: 'coracao', n: 'coração' },
+  { id: 'prova', n: 'prova final' }, { id: 'revisar', n: 'revisar' }, { id: 'verbos', n: 'verbos' },
+  { id: 'viagem', n: 'viagem' }, { id: 'async', n: 'async' }, { id: 'arrays', n: 'arrays' },
+  { id: 'pegadinhas', n: 'pegadinhas' }, { id: 'datas', n: 'datas' }, { id: 'imperio', n: 'império' },
+];
+// st: novo | aprendizado | maduro · due: dias a partir de hoje (negativo = atrasado; null = New Card) · cm: Comments
+const K = (id, deck, st, due, labels, q, a, cm = []) => ({ id, deck, st, due: st === 'novo' ? null : due, labels, q, a, cm });
+let CARDS = [
+  K('biceps', 'anatomia', 'aprendizado', -2, ['musculos', 'prova'], 'Qual músculo é o principal flexor do cotovelo?', 'O <b>bíceps braquial</b>, com ajuda do braquial e do braquiorradial.',
+    [{ quando: '3 out · 19:40', txt: 'Lembrar: o braquial é o mais forte, o bíceps é o “principal” por causa da supinação.' }, { quando: '12 out · 08:15', txt: 'Caiu na prova do módulo 2.' }]),
+  K('triceps', 'anatomia', 'novo', 0, ['musculos'], 'Qual músculo é o principal extensor do cotovelo?', 'O <b>tríceps braquial</b>.'),
+  K('ossos', 'anatomia', 'maduro', 0, ['ossos'], 'Quantos ossos tem o corpo humano adulto?', '<b>206</b> ossos.'),
+  K('femur', 'anatomia', 'maduro', 0, ['ossos'], 'Qual é a parte destacada do fêmur?<img src="' + IMG + '" alt="Fêmur com a extremidade superior destacada">', 'A <b>cabeça do fêmur</b>, que se articula com o acetábulo do quadril.'),
+  K('mitral', 'anatomia', 'aprendizado', 0, ['coracao', 'prova'], 'Entre quais câmaras fica a valva mitral?', 'Entre o <b>átrio esquerdo</b> e o <b>ventrículo esquerdo</b>. Impede o refluxo de sangue durante a sístole.',
+    [{ quando: '18 set · 21:02', txt: 'Mitral = bicúspide. Tricúspide fica do lado direito.' }]),
+  K('cervical', 'anatomia', 'novo', 0, ['ossos'], 'Quantas vértebras tem a coluna cervical?', '<b>7</b> vértebras (C1 a C7).'),
+  K('neuronio', 'anatomia', 'novo', 0, ['revisar'], 'Quais são as partes de um neurônio?', '<ul><li>Dendritos</li><li>Corpo celular</li><li>Axônio</li></ul>'),
+  K('diafragma', 'anatomia', 'maduro', 30, ['musculos'], 'Qual é o principal músculo da respiração?', 'O <b>diafragma</b>.'),
+  K('sinoatrial', 'anatomia', 'aprendizado', -1, ['coracao', 'revisar'], 'Onde nasce o impulso elétrico do coração?', 'No <b>nó sinoatrial</b>, na parede do átrio direito.',
+    [{ quando: '15 out · 22:30', txt: 'Ver o vídeo da aula 7 de novo, a parte do nó atrioventricular.' }]),
+  K('estribo', 'anatomia', 'aprendizado', 4, ['ossos'], 'Qual é o menor osso do corpo?', 'O <b>estribo</b>, na orelha média.'),
+
+  K('lookforward', 'ingles', 'novo', 0, ['viagem'], 'Traduza: <i>I’m looking forward to the trip.</i>', '“Estou ansioso pela viagem.” <i>Look forward to</i> pede verbo com <i>-ing</i> ou substantivo.'),
+  K('giveup', 'ingles', 'maduro', 9, ['verbos'], 'O que significa <i>give up</i>?', '“Desistir.” Ex.: <i>Don’t give up now.</i>'),
+  K('runout', 'ingles', 'aprendizado', 0, ['verbos'], '<i>We ran out of milk.</i> O que é <i>run out of</i>?', '“Ficar sem” alguma coisa.'),
+  K('putoff', 'ingles', 'aprendizado', -1, ['verbos', 'revisar'], 'O que significa <i>put off</i>?', '“Adiar.” Ex.: <i>Stop putting it off.</i>',
+    [{ quando: '20 out · 07:50', txt: 'Confundo com put away (guardar).' }]),
+  K('checkin', 'ingles', 'maduro', 21, ['viagem'], 'O que é <i>check in</i> no hotel?', 'Registrar a chegada: “fazer o check-in”.'),
+  K('getover', 'ingles', 'maduro', 0, ['verbos'], 'O que significa <i>get over</i>?', '“Superar” uma doença, um término, um susto.'),
+  K('lookafter', 'ingles', 'novo', 0, ['verbos'], 'O que significa <i>look after</i>?', '“Cuidar de.”'),
+  K('takeoff', 'ingles', 'aprendizado', 2, ['viagem'], 'O avião vai <i>take off</i>. O que acontece?', 'Ele <b>decola</b>.'),
+  K('bringup', 'ingles', 'aprendizado', 0, ['verbos'], 'O que é <i>bring up</i> um assunto?', '“Mencionar”, puxar o assunto.'),
+  K('figureout', 'ingles', 'maduro', 15, ['verbos'], 'O que significa <i>figure out</i>?', '“Descobrir”, entender depois de pensar.'),
+
+  K('typeof', 'js', 'aprendizado', -3, ['pegadinhas'], 'O que este código imprime?<pre>console.log(typeof null);</pre>', '<code>"object"</code>. É um erro histórico da linguagem que nunca foi corrigido para não quebrar sites antigos.'),
+  K('map', 'js', 'aprendizado', 0, ['arrays'], 'O que <code>[1, 2, 3].map(n =&gt; n * 2)</code> devolve?', 'Um <b>novo array</b>: <code>[2, 4, 6]</code>. O array original não muda.'),
+  K('promiseall', 'js', 'aprendizado', 0, ['async'], 'O que <code>Promise.all</code> faz se uma das Promises falhar?', 'Rejeita na hora, com o erro da primeira que falhou. As outras continuam rodando, mas o resultado delas se perde.',
+    [{ quando: '2 out · 13:10', txt: 'Se quiser todos os resultados, usar Promise.allSettled.' }, { quando: '9 out · 18:44', txt: 'Perguntaram isso na entrevista da agência.' }]),
+  K('letconst', 'js', 'maduro', 25, [], 'Qual é a diferença entre <code>let</code> e <code>const</code>?', '<code>const</code> não pode ser reatribuída. As duas têm escopo de bloco.'),
+  K('eqeq', 'js', 'maduro', 6, ['pegadinhas'], 'O que <code>0 == ""</code> devolve?', '<code>true</code>, por causa da coerção. Com <code>===</code>, dá <code>false</code>.'),
+  K('await', 'js', 'aprendizado', 1, ['async'], 'Onde se pode usar <code>await</code>?', 'Dentro de uma função <code>async</code> e no topo de módulos ES.'),
+  K('filter', 'js', 'maduro', 40, ['arrays'], 'O que <code>filter</code> devolve se nenhum item passar no teste?', 'Um array vazio: <code>[]</code>.'),
+  K('nan', 'js', 'maduro', 8, ['pegadinhas'], 'Quanto vale <code>NaN === NaN</code>?', '<code>false</code>. Para testar, use <code>Number.isNaN</code>.'),
+
+  K('independencia', 'historia', 'maduro', 18, ['datas'], 'Em que ano foi a Independência do Brasil?', '<b>1822</b>, em 7 de setembro.'),
+  K('aurea', 'historia', 'maduro', 1, ['datas', 'prova'], 'O que foi a Lei Áurea?', 'A lei de <b>1888</b> que aboliu a escravidão no Brasil.',
+    [{ quando: '28 set · 10:05', txt: 'Assinada pela princesa Isabel. Lembrar da Lei do Ventre Livre (1871) antes.' }]),
+  K('republica', 'historia', 'aprendizado', 5, ['datas'], 'Quem proclamou a República?', 'O marechal <b>Deodoro da Fonseca</b>, em 1889.'),
+  K('dpedro2', 'historia', 'aprendizado', 2, ['imperio'], 'Quantos anos D. Pedro II tinha ao assumir o trono?', '<b>14 anos</b>, com o Golpe da Maioridade, em 1840.'),
+  K('tiradentes', 'historia', 'maduro', 33, [], 'Quem foi Tiradentes?', 'Joaquim José da Silva Xavier, líder da Inconfidência Mineira, executado em 1792.'),
+  K('cabanagem', 'historia', 'aprendizado', 5, ['imperio', 'revisar'], 'Onde aconteceu a Cabanagem?', 'No <b>Grão-Pará</b>, de 1835 a 1840.'),
+];
+// reset: data do Schedule Reset (o Card volta a Novo, o histórico de Ratings fica)
+CARDS.find((c) => c.id === 'lookafter').reset = '14 out';
+
+// mais Cards, para os totais baterem com o Início e o Progresso (42 · 120 · 64 · 35). Todos vencem depois de hoje.
+// Cards por estado (Novo/Em aprendizado/Maduro): Anatomia 3/23/16 · Inglês 2/50/68 · JavaScript 0/26/38 · História 0/23/12
+const MAIS = {
+  "anatomia": [
+    ["Qual osso forma a testa?", "O <b>frontal</b>."],
+    ["Quantas costelas tem o corpo humano?", "<b>24</b>, 12 pares."],
+    ["Qual é o osso do braço?", "O <b>úmero</b>."],
+    ["Quais ossos formam o antebraço?", "O <b>rádio</b> e a <b>ulna</b>."],
+    ["Qual osso protege o joelho pela frente?", "A <b>patela</b>."],
+    ["Qual é o osso da canela?", "A <b>tíbia</b>."],
+    ["Quantas vértebras tem a coluna lombar?", "<b>5</b> vértebras (L1 a L5)."],
+    ["Qual é o único osso móvel do crânio?", "A <b>mandíbula</b>."],
+    ["Onde fica a escápula?", "Nas costas, sobre as costelas: é a omoplata."],
+    ["Qual osso liga o braço ao tronco pela frente?", "A <b>clavícula</b>."],
+    ["Quantos ossos tem a mão?", "<b>27</b> ossos."],
+    ["Qual é o maior músculo do corpo?", "O <b>glúteo máximo</b>."],
+    ["Qual músculo forma a panturrilha?", "O <b>gastrocnêmio</b>, com o sóleo."],
+    ["Qual músculo estende o joelho?", "O <b>quadríceps femoral</b>."],
+    ["Qual músculo abduz o braço?", "O <b>deltoide</b>."],
+    ["Qual músculo fecha a boca ao mastigar?", "O <b>masseter</b>."],
+    ["Quantas câmaras tem o coração?", "<b>4</b>: dois átrios e dois ventrículos."],
+    ["Qual valva fica entre o átrio e o ventrículo direitos?", "A <b>tricúspide</b>."],
+    ["Qual artéria sai do ventrículo esquerdo?", "A <b>aorta</b>."],
+    ["Para onde vai o sangue da artéria pulmonar?", "Para os <b>pulmões</b>, ainda sem oxigênio."],
+    ["Qual é a camada muscular do coração?", "O <b>miocárdio</b>."],
+    ["Onde fica o nó atrioventricular?", "Entre os átrios e os ventrículos, no septo."],
+    ["Qual é o maior órgão do corpo?", "A <b>pele</b>."],
+    ["Onde o alimento é mais absorvido?", "No <b>intestino delgado</b>."],
+    ["Qual órgão produz a bile?", "O <b>fígado</b>."],
+    ["Onde a bile fica guardada?", "Na <b>vesícula biliar</b>."],
+    ["Qual é a unidade funcional do rim?", "O <b>néfron</b>."],
+    ["Quantos lobos tem o pulmão direito?", "<b>3</b> lobos."],
+    ["O que liga músculo a osso?", "O <b>tendão</b>."],
+    ["O que liga osso a osso?", "O <b>ligamento</b>."],
+    ["Qual parte do encéfalo cuida do equilíbrio?", "O <b>cerebelo</b>."],
+    ["Qual nervo é o mais longo do corpo?", "O <b>isquiático</b>."]
+  ],
+  "ingles": [
+    ["O que significa <i>break down</i>?", "“Quebrar, enguiçar.”"],
+    ["O que significa <i>break up</i>?", "“Terminar um namoro.”"],
+    ["O que significa <i>bring back</i>?", "“Trazer de volta.”"],
+    ["O que significa <i>call back</i>?", "“Retornar a ligação.”"],
+    ["O que significa <i>call off</i>?", "“Cancelar.”"],
+    ["O que significa <i>calm down</i>?", "“Acalmar-se.”"],
+    ["O que significa <i>carry on</i>?", "“Continuar.”"],
+    ["O que significa <i>catch up</i>?", "“Alcançar, pôr em dia.”"],
+    ["O que significa <i>cheer up</i>?", "“Animar-se.”"],
+    ["O que significa <i>clean up</i>?", "“Arrumar, limpar.”"],
+    ["O que significa <i>come back</i>?", "“Voltar.”"],
+    ["O que significa <i>come in</i>?", "“Entrar.”"],
+    ["O que significa <i>come up with</i>?", "“Ter uma ideia.”"],
+    ["O que significa <i>count on</i>?", "“Contar com.”"],
+    ["O que significa <i>cut down on</i>?", "“Diminuir o consumo de.”"],
+    ["O que significa <i>deal with</i>?", "“Lidar com.”"],
+    ["O que significa <i>drop off</i>?", "“Deixar alguém num lugar.”"],
+    ["O que significa <i>drop out</i>?", "“Abandonar os estudos.”"],
+    ["O que significa <i>eat out</i>?", "“Comer fora.”"],
+    ["O que significa <i>end up</i>?", "“Acabar (num lugar ou situação).”"],
+    ["O que significa <i>fall apart</i>?", "“Desmoronar.”"],
+    ["O que significa <i>fill in</i>?", "“Preencher.”"],
+    ["O que significa <i>fill out</i>?", "“Preencher um formulário.”"],
+    ["O que significa <i>find out</i>?", "“Descobrir.”"],
+    ["O que significa <i>get along</i>?", "“Dar-se bem.”"],
+    ["O que significa <i>get away</i>?", "“Escapar, viajar.”"],
+    ["O que significa <i>get back</i>?", "“Voltar.”"],
+    ["O que significa <i>get in</i>?", "“Entrar (num carro).”"],
+    ["O que significa <i>get off</i>?", "“Descer (do ônibus).”"],
+    ["O que significa <i>get on</i>?", "“Subir (no ônibus).”"],
+    ["O que significa <i>get up</i>?", "“Levantar-se.”"],
+    ["O que significa <i>give away</i>?", "“Doar, revelar.”"],
+    ["O que significa <i>give back</i>?", "“Devolver.”"],
+    ["O que significa <i>give in</i>?", "“Ceder.”"],
+    ["O que significa <i>go ahead</i>?", "“Ir em frente.”"],
+    ["O que significa <i>go on</i>?", "“Continuar.”"],
+    ["O que significa <i>go out</i>?", "“Sair.”"],
+    ["O que significa <i>go over</i>?", "“Revisar.”"],
+    ["O que significa <i>grow up</i>?", "“Crescer.”"],
+    ["O que significa <i>hang out</i>?", "“Passar o tempo, sair com amigos.”"],
+    ["O que significa <i>hang up</i>?", "“Desligar o telefone.”"],
+    ["O que significa <i>hold on</i>?", "“Esperar um pouco.”"],
+    ["O que significa <i>keep up</i>?", "“Manter o ritmo.”"],
+    ["O que significa <i>let down</i>?", "“Decepcionar.”"],
+    ["O que significa <i>log in</i>?", "“Entrar numa conta.”"],
+    ["O que significa <i>look for</i>?", "“Procurar.”"],
+    ["O que significa <i>look into</i>?", "“Investigar.”"],
+    ["O que significa <i>look out</i>?", "“Tomar cuidado.”"],
+    ["O que significa <i>look up</i>?", "“Procurar (no dicionário).”"],
+    ["O que significa <i>make up</i>?", "“Inventar; fazer as pazes.”"],
+    ["O que significa <i>mix up</i>?", "“Confundir.”"],
+    ["O que significa <i>move in</i>?", "“Mudar-se para.”"],
+    ["O que significa <i>move out</i>?", "“Mudar-se de.”"],
+    ["O que significa <i>pass away</i>?", "“Falecer.”"],
+    ["O que significa <i>pass out</i>?", "“Desmaiar.”"],
+    ["O que significa <i>pay back</i>?", "“Pagar de volta.”"],
+    ["O que significa <i>pick up</i>?", "“Buscar, pegar.”"],
+    ["O que significa <i>point out</i>?", "“Apontar, destacar.”"],
+    ["O que significa <i>put away</i>?", "“Guardar.”"],
+    ["O que significa <i>put on</i>?", "“Vestir.”"],
+    ["O que significa <i>put up with</i>?", "“Tolerar.”"],
+    ["O que significa <i>run into</i>?", "“Encontrar por acaso.”"],
+    ["O que significa <i>set up</i>?", "“Montar, configurar.”"],
+    ["O que significa <i>show off</i>?", "“Exibir-se.”"],
+    ["O que significa <i>show up</i>?", "“Aparecer.”"],
+    ["O que significa <i>shut down</i>?", "“Desligar, fechar.”"],
+    ["O que significa <i>sign up</i>?", "“Inscrever-se.”"],
+    ["O que significa <i>sit down</i>?", "“Sentar-se.”"],
+    ["O que significa <i>slow down</i>?", "“Desacelerar.”"],
+    ["O que significa <i>sort out</i>?", "“Resolver.”"],
+    ["O que significa <i>speak up</i>?", "“Falar mais alto.”"],
+    ["O que significa <i>stand out</i>?", "“Destacar-se.”"],
+    ["O que significa <i>stay up</i>?", "“Ficar acordado.”"],
+    ["O que significa <i>take after</i>?", "“Puxar a (um parente).”"],
+    ["O que significa <i>take back</i>?", "“Retirar o que disse.”"],
+    ["O que significa <i>take on</i>?", "“Assumir.”"],
+    ["O que significa <i>take out</i>?", "“Tirar, levar para fora.”"],
+    ["O que significa <i>take over</i>?", "“Assumir o controle.”"],
+    ["O que significa <i>talk over</i>?", "“Discutir.”"],
+    ["O que significa <i>think over</i>?", "“Pensar bem.”"],
+    ["O que significa <i>throw away</i>?", "“Jogar fora.”"],
+    ["O que significa <i>try on</i>?", "“Experimentar (roupa).”"],
+    ["O que significa <i>turn down</i>?", "“Recusar; abaixar o volume.”"],
+    ["O que significa <i>turn off</i>?", "“Desligar.”"],
+    ["O que significa <i>turn on</i>?", "“Ligar.”"],
+    ["O que significa <i>turn up</i>?", "“Aumentar o volume; aparecer.”"],
+    ["O que significa <i>wake up</i>?", "“Acordar.”"],
+    ["O que significa <i>warm up</i>?", "“Aquecer.”"],
+    ["O que significa <i>watch out</i>?", "“Tomar cuidado.”"],
+    ["O que significa <i>work out</i>?", "“Malhar; dar certo.”"],
+    ["O que significa <i>write down</i>?", "“Anotar.”"],
+    ["O que significa <i>back up</i>?", "“Fazer backup; apoiar.”"],
+    ["O que significa <i>blow up</i>?", "“Explodir.”"],
+    ["O que significa <i>check out</i>?", "“Fazer o check-out; conferir.”"],
+    ["O que significa <i>come across</i>?", "“Deparar-se com.”"],
+    ["O que significa <i>drop by</i>?", "“Passar rapidinho.”"],
+    ["O que significa <i>fall behind</i>?", "“Ficar para trás.”"],
+    ["O que significa <i>fit in</i>?", "“Encaixar-se.”"],
+    ["O que significa <i>get rid of</i>?", "“Livrar-se de.”"],
+    ["O que significa <i>hand in</i>?", "“Entregar (trabalho).”"],
+    ["O que significa <i>hold up</i>?", "“Atrasar; assaltar.”"],
+    ["O que significa <i>kick off</i>?", "“Começar.”"],
+    ["O que significa <i>lay off</i>?", "“Demitir.”"],
+    ["O que significa <i>look down on</i>?", "“Desprezar.”"],
+    ["O que significa <i>look up to</i>?", "“Admirar.”"],
+    ["O que significa <i>put out</i>?", "“Apagar (fogo).”"],
+    ["O que significa <i>run away</i>?", "“Fugir.”"],
+    ["O que significa <i>set off</i>?", "“Partir; disparar.”"],
+    ["O que significa <i>settle down</i>?", "“Sossegar.”"],
+    ["O que significa <i>stick to</i>?", "“Manter-se fiel a.”"]
+  ],
+  "js": [
+    ["O que <code>push</code> faz?", "Adiciona itens no fim do array e devolve o novo tamanho."],
+    ["O que <code>pop</code> faz?", "Remove o último item e o devolve."],
+    ["O que <code>shift</code> faz?", "Remove o primeiro item e o devolve."],
+    ["O que <code>unshift</code> faz?", "Adiciona itens no começo do array."],
+    ["O que <code>slice</code> faz?", "Copia um trecho do array sem mudar o original."],
+    ["O que <code>splice</code> faz?", "Remove ou insere itens, mudando o array."],
+    ["O que <code>concat</code> faz?", "Junta arrays num novo array."],
+    ["O que <code>includes</code> faz?", "Diz se o array tem o valor: <code>true</code> ou <code>false</code>."],
+    ["O que <code>indexOf</code> faz?", "Devolve a posição do valor, ou <code>-1</code>."],
+    ["O que <code>find</code> faz?", "Devolve o primeiro item que passa no teste."],
+    ["O que <code>findIndex</code> faz?", "Devolve a posição do primeiro item que passa no teste."],
+    ["O que <code>some</code> faz?", "<code>true</code> se algum item passa no teste."],
+    ["O que <code>every</code> faz?", "<code>true</code> se todos os itens passam no teste."],
+    ["O que <code>reduce</code> faz?", "Acumula os itens num único valor."],
+    ["O que <code>forEach</code> faz?", "Roda a função para cada item; devolve <code>undefined</code>."],
+    ["O que <code>sort</code> faz?", "Ordena o array no lugar; por padrão, como texto."],
+    ["O que <code>reverse</code> faz?", "Inverte o array no lugar."],
+    ["O que <code>join</code> faz?", "Junta os itens num texto, com um separador."],
+    ["O que <code>flat</code> faz?", "Achata arrays aninhados num nível."],
+    ["O que <code>flatMap</code> faz?", "Faz <code>map</code> e depois <code>flat</code> de um nível."],
+    ["O que <code>Array.from</code> faz?", "Cria um array a partir de um iterável ou de algo com <code>length</code>."],
+    ["O que <code>Array.isArray</code> faz?", "Diz se o valor é um array."],
+    ["O que <code>Object.keys</code> faz?", "Devolve as chaves próprias do objeto."],
+    ["O que <code>Object.values</code> faz?", "Devolve os valores próprios do objeto."],
+    ["O que <code>Object.entries</code> faz?", "Devolve pares <code>[chave, valor]</code>."],
+    ["O que <code>Object.assign</code> faz?", "Copia propriedades para o objeto de destino."],
+    ["O que <code>Object.freeze</code> faz?", "Impede mudanças no objeto (só no primeiro nível)."],
+    ["O que <code>JSON.stringify</code> faz?", "Converte um valor em texto JSON."],
+    ["O que <code>JSON.parse</code> faz?", "Converte texto JSON num valor."],
+    ["O que <code>trim</code> faz?", "Tira espaços do começo e do fim do texto."],
+    ["O que <code>split</code> faz?", "Divide o texto num array, por um separador."],
+    ["O que <code>padStart</code> faz?", "Completa o texto no começo até um tamanho."],
+    ["O que <code>replaceAll</code> faz?", "Troca todas as ocorrências de um trecho."],
+    ["O que <code>startsWith</code> faz?", "Diz se o texto começa com o trecho."],
+    ["O que <code>parseInt</code> faz?", "Converte texto em número inteiro, numa base."],
+    ["O que <code>Number.isInteger</code> faz?", "Diz se o valor é um número inteiro."],
+    ["O que <code>toFixed</code> faz?", "Formata o número com N casas decimais, como texto."],
+    ["O que <code>Math.max</code> faz?", "Devolve o maior dos números."],
+    ["O que <code>Math.round</code> faz?", "Arredonda para o inteiro mais próximo."],
+    ["O que <code>Math.random</code> faz?", "Devolve um número entre 0 (incluso) e 1."],
+    ["O que <code>setTimeout</code> faz?", "Roda a função uma vez, depois de um tempo."],
+    ["O que <code>setInterval</code> faz?", "Roda a função de tempos em tempos."],
+    ["O que <code>clearTimeout</code> faz?", "Cancela um <code>setTimeout</code>."],
+    ["O que <code>Promise.race</code> faz?", "Resolve ou rejeita com a primeira Promise que terminar."],
+    ["O que <code>Promise.allSettled</code> faz?", "Espera todas e devolve o resultado de cada uma."],
+    ["O que <code>Promise.any</code> faz?", "Resolve com a primeira que der certo."],
+    ["O que <code>fetch</code> faz?", "Faz uma requisição HTTP e devolve uma Promise."],
+    ["O que <code>structuredClone</code> faz?", "Faz uma cópia profunda de um valor."],
+    ["O que <code>new Set()</code> faz?", "Cria uma coleção de valores sem repetição."],
+    ["O que <code>new Map()</code> faz?", "Cria um mapa de chave e valor, com chaves de qualquer tipo."],
+    ["O que o operador <code>??</code> faz?", "Usa o valor da direita só se o da esquerda for <code>null</code> ou <code>undefined</code>."],
+    ["O que o operador <code>?.</code> faz?", "Acessa a propriedade só se o valor não for <code>null</code> nem <code>undefined</code>."],
+    ["O que o spread <code>...</code> faz?", "Espalha os itens de um iterável ou as propriedades de um objeto."],
+    ["O que <code>typeof</code> faz?", "Devolve o tipo do valor, como texto."],
+    ["O que <code>instanceof</code> faz?", "Diz se o objeto foi criado por aquele construtor."],
+    ["O que <code>Symbol()</code> faz?", "Cria um valor único, usado como chave."]
+  ],
+  "historia": [
+    ["Quando chegou a esquadra de Cabral?", "Em <b>1500</b>."],
+    ["Quando a capital foi para o Rio de Janeiro?", "Em <b>1763</b>."],
+    ["Quando a família real chegou ao Brasil?", "Em <b>1808</b>."],
+    ["O que foi a Abertura dos Portos?", "O decreto de 1808 que abriu os portos às nações amigas."],
+    ["Quando o Brasil virou Reino Unido a Portugal?", "Em <b>1815</b>."],
+    ["Quem foi o primeiro imperador do Brasil?", "<b>D. Pedro I</b>."],
+    ["Quando foi outorgada a primeira Constituição?", "Em <b>1824</b>."],
+    ["O que foi a Confederação do Equador?", "Revolta de 1824 no Nordeste contra o poder do imperador."],
+    ["Quando D. Pedro I abdicou?", "Em <b>1831</b>."],
+    ["O que foi o Período Regencial?", "De 1831 a 1840, quando regentes governaram no lugar de D. Pedro II."],
+    ["Onde aconteceu a Farroupilha?", "No <b>Rio Grande do Sul</b>, de 1835 a 1845."],
+    ["Onde aconteceu a Sabinada?", "Na <b>Bahia</b>, em 1837."],
+    ["O que foi a Lei Eusébio de Queirós?", "A lei de <b>1850</b> que proibiu o tráfico de escravizados."],
+    ["O que foi a Lei de Terras?", "A lei de <b>1850</b> que fez da compra o único jeito de ter terra."],
+    ["Quando foi a Guerra do Paraguai?", "De <b>1864</b> a <b>1870</b>."],
+    ["O que foi a Lei do Sexagenário?", "A lei de <b>1885</b> que libertou escravizados com mais de 60 anos."],
+    ["Quem foi o primeiro presidente civil?", "<b>Prudente de Morais</b>, em 1894."],
+    ["O que foi a Revolta da Vacina?", "Revolta de <b>1904</b> no Rio contra a vacinação obrigatória."],
+    ["O que foi a Revolta da Chibata?", "Revolta de marinheiros em <b>1910</b> contra os castigos físicos."],
+    ["O que foi a Semana de Arte Moderna?", "Evento de <b>1922</b> em São Paulo que lançou o modernismo."],
+    ["Quando começou a Era Vargas?", "Em <b>1930</b>."],
+    ["O que foi o Estado Novo?", "A ditadura de Vargas, de 1937 a 1945."],
+    ["Quando foi criada a CLT?", "Em <b>1943</b>."],
+    ["Quando Brasília foi inaugurada?", "Em <b>1960</b>."],
+    ["Quando começou a ditadura militar?", "Em <b>1964</b>."],
+    ["O que foi o AI-5?", "O ato de <b>1968</b> que endureceu a ditadura."],
+    ["O que foi o movimento Diretas Já?", "Campanha de 1983 e 1984 por eleição direta para presidente."],
+    ["Quando foi promulgada a Constituição atual?", "Em <b>1988</b>."],
+    ["Quando foi lançado o Plano Real?", "Em <b>1994</b>."]
+  ]
+};
+const MAIS_APR = {anatomia:  19,  ingles:  46,  js:  22,  historia:  20};
+Object.entries(MAIS).forEach(([deck, lista]) => lista.forEach(([q, a], i) => {
+  const apr = i < MAIS_APR[deck];
+  CARDS.push(K(`${deck}-${i + 1}`, deck, apr ? 'aprendizado' : 'maduro', apr ? 1 + (i * 3) % 9 : 7 + (i * 7) % 54, [], q, a));
+}));
+if (S.dados === 'vazio') { DECKS = []; CARDS = []; LABELS = []; }
+
+/* ---------- ponte com o editor (só nesta aba) ---------- */
+const store = {
+  get(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+// edições salvas no editor: { <id>: { q, a, labels (nomes) | null } }
+Object.entries(store.get('daruma:edicoes') || {}).forEach(([id, e]) => {
+  const c = CARDS.find((x) => x.id === id);
+  if (!c) return;
+  Object.assign(c, { q: e.q, a: e.a });
+  if (e.labels) c.labels = e.labels.map((nm) => {
+    let l = LABELS.find((x) => x.n === nm);
+    if (!l) { l = { id: nm, n: nm }; LABELS.push(l); }
+    return l.id;
+  });
+});
+
+/* ---------- consultas ---------- */
+const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const plain = (h) => { const d = document.createElement('div'); d.innerHTML = h.replace(/<pre>/g, ' <pre>'); return d.textContent.replace(/\s+/g, ' ').trim(); };
+const semAcento = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const deckOf = (id) => DECKS.find((d) => d.id === id);
+const labelOf = (id) => LABELS.find((l) => l.id === id);
+const cardOf = (id) => CARDS.find((c) => c.id === id);
+const isHoje = (c) => c.due !== null && c.due <= 0;
+function counts(deckId) {
+  const cs = CARDS.filter((c) => c.deck === deckId);
+  return { total: cs.length, novos: cs.filter((c) => c.st === 'novo').length, hoje: cs.filter(isHoje).length };
+}
+const labelCount = (id) => CARDS.filter((c) => c.labels.includes(id)).length;
+
+// busca: pergunta, resposta e Comments, sem acento. Devolve onde achou.
+function matchOf(c, q) {
+  if (!q) return { where: null };
+  const k = semAcento(q.trim());
+  if (!k) return { where: null };
+  if (semAcento(plain(c.q)).includes(k)) return { where: 'q' };
+  if (semAcento(plain(c.a)).includes(k)) return { where: 'a', text: plain(c.a) };
+  const m = c.cm.find((x) => semAcento(x.txt).includes(k));
+  return m ? { where: 'c', text: m.txt } : null;
+}
+// destaca o termo sem acento: cada caractere vira 1 caractere ao tirar o acento
+function hl(text, q) {
+  const k = semAcento((q || '').trim());
+  if (!k) return esc(text);
+  const norm = [...text].map((ch) => semAcento(ch) || ch).join('');
+  if (norm.length !== text.length) return esc(text);
+  let out = '', i = 0, j;
+  while ((j = norm.indexOf(k, i)) !== -1) { out += esc(text.slice(i, j)) + '<mark>' + esc(text.slice(j, j + k.length)) + '</mark>'; i = j + k.length; }
+  return out + esc(text.slice(i));
+}
+function snippet(text, q) {
+  const j = semAcento(text).indexOf(semAcento(q.trim()));
+  if (j < 0) return esc(text);
+  const a = Math.max(0, j - 14), b = Math.min(text.length, j + q.length + 60);
+  return (a ? '…' : '') + hl(text.slice(a, b), q) + (b < text.length ? '…' : '');
+}
+
+const scopeDeck = () => S.tela === 'deck' ? S.deckId : S.f.deck;
+const anyFilter = () => !!(S.f.label || S.f.estado || S.f.hoje || (S.tela !== 'deck' && S.f.deck));
+function list() {
+  const d = scopeDeck();
+  return CARDS.filter((c) => (!d || c.deck === d) && (!S.f.label || c.labels.includes(S.f.label)) && (!S.f.estado || c.st === S.f.estado) && (!S.f.hoje || isHoje(c)))
+    .map((c) => ({ c, m: matchOf(c, S.q) })).filter((x) => x.m);
+}
+
+/* ---------- ícones (traços estilo lucide) ---------- */
+const PATHS = {
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  ok: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+  down: '<path d="m6 9 6 6 6-6"/>', up: '<path d="m18 15-6-6-6 6"/>',
+  updown: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
+  arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>', minus: '<path d="M5 12h14"/>',
+  tag: '<path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+  rotate: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  dots: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/>',
+  move: '<path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/>',
+  msg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+  cal: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+};
+const ic = (nm, cls = 'h-5 w-5') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${PATHS[nm]}</svg>`;
+
+/* ---------- componentes base (da fundação visual) ---------- */
+const BTN_BASE = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-50';
+const BTN_SIZE = { sm: 'h-8 px-3 text-xs', md: 'h-10 px-4 text-sm', lg: 'h-12 px-6 text-base', icon: 'h-10 w-10', iconsm: 'h-8 w-8' };
+const BTN_KIND = {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+  link: 'text-primary underline-offset-4 hover:underline',
+};
+const btn = (kind = 'primary', size = 'md', extra = '') => `${BTN_BASE} ${BTN_SIZE[size]} ${BTN_KIND[kind]} ${extra}`;
+const INPUT = 'h-10 w-full rounded-md border border-input bg-background px-3 text-base md:text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const n = (v) => `<span class="tnum">${v}</span>`;
+const plural = (v, s, p) => `${n(v)} ${v === 1 ? s : p}`;
+const chip = (id, extra = '') => `<span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${extra}">${ic('tag', 'h-3 w-3 text-muted-foreground')}${esc(labelOf(id).n)}</span>`;
+const badge = (t, cls) => `<span class="inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}">${t}</span>`;
+function dueBadge(c) {
+  if (c.st === 'novo') return badge('Novo', 'bg-primary/10 text-primary');
+  if (c.due < 0) return badge('Atrasado', 'bg-destructive/10 text-destructive');
+  if (c.due === 0) return badge('Vencido hoje', 'bg-warning/15 text-warning');
+  return '';
+}
+function dueText(c, long = false) {
+  if (c.st === 'novo' && c.reset) return long ? 'Entra como novo numa próxima Daily Review' : '—';
+  if (c.st === 'novo') return long ? 'Ainda não estudado. Entra numa Daily Review dentro do limite de novos por dia.' : '—';
+  if (c.due < 0) return `Atrasado ${plural(-c.due, 'dia', 'dias')}`;
+  if (c.due === 0) return 'Hoje';
+  if (c.due === 1) return 'Amanhã';
+  const d = dayOf(c.due);
+  return long ? `Em ${n(c.due)} dias, ${SEM[d.getDay()]} ${fmt(d)}` : `Em ${n(c.due)} dias`;
+}
+const deckCountsLine = (id) => { const k = counts(id); return `${plural(k.total, 'card', 'cards')}${k.novos ? ` · ${plural(k.novos, 'novo', 'novos')}` : ''}`; };
+const hojeBadge = (id) => { const k = counts(id); return k.hoje ? badge(`${n(k.hoje)}&nbsp;para hoje`, 'bg-warning/15 text-warning') : k.total ? badge('Em dia', 'bg-muted text-muted-foreground') : ''; };
+const checkbox = (on, act, label, extra = '', mixed = false) => `
+  <button data-act="${act}" role="checkbox" aria-checked="${mixed ? 'mixed' : on}" aria-label="${label}" class="grid h-5 w-5 shrink-0 place-items-center rounded-[6px] border ${on || mixed ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-background'} ${extra}">${on ? ic('check', 'h-3.5 w-3.5') : mixed ? ic('minus', 'h-3.5 w-3.5') : ''}</button>`;
+const tabOn = (k) => S.tela === k;
+const pillTabs = (extra = '') => `
+  <div class="inline-flex rounded-full bg-muted p-1 ${extra}" role="tablist">
+    ${[['decks', 'Decks'], ['cards', 'Cards']].map(([k, l]) => `<button data-act="tab:${k}" role="tab" aria-selected="${tabOn(k)}" class="h-8 flex-1 rounded-full px-5 text-sm transition ${tabOn(k) ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}">${l}</button>`).join('')}
+  </div>`;
+const searchBox = (fkey, extra = '', ph = 'Buscar na pergunta, na resposta e nos Comments') => `
+  <label class="relative block ${extra}">
+    <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">${ic('search', 'h-4 w-4')}</span>
+    <input data-q data-fkey="${fkey}" type="search" value="${esc(S.q)}" placeholder="${ph}" aria-label="Buscar Cards" class="h-11 w-full rounded-btn border border-input bg-background pl-10 pr-10 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm">
+    ${S.q ? `<button data-act="qclear" class="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-accent" aria-label="Limpar busca">${ic('x', 'h-4 w-4')}</button>` : ''}
+  </label>`;
+const whereNote = (m) => m.where === 'a' ? 'na resposta' : m.where === 'c' ? 'num Comment' : '';
+function resultLine(total) {
+  if (S.q) return `${plural(total, 'card', 'cards')} com “${esc(S.q.trim())}”`;
+  return plural(total, 'card', 'cards');
+}
+const empty = (icon, title, body, action = '') => `
+  <div class="flex flex-col items-center rounded-lg border border-dashed px-6 py-12 text-center">
+    <span class="grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">${ic(icon, 'h-6 w-6')}</span>
+    <p class="mt-4 font-medium">${title}</p>
+    <p class="mt-1 max-w-sm text-sm text-muted-foreground">${body}</p>
+    ${action}
+  </div>`;
+function noResults() {
+  return empty('search', 'Nenhum Card encontrado', S.q ? `Nada com “${esc(S.q.trim())}”${anyFilter() ? ' com estes filtros' : ''}. Confira a grafia ou tire um filtro.` : 'Nenhum Card com estes filtros.',
+    `<button data-act="flimpar" class="${btn('outline', 'sm', 'mt-4')}">Limpar busca e filtros</button>`);
+}
+const deckVazio = () => empty('layers', 'Este Deck ainda não tem Cards', 'Escreva os primeiros Cards. Ao terminar, “Estudar agora” abre uma sessão só com eles.', `<button data-act="adicionar" class="${btn('primary', 'md', 'mt-4')}">${ic('plus', 'h-4 w-4')}Adicionar Cards</button>`);
+const semDecks = () => empty('layers', 'Crie seu primeiro Deck', 'Um Deck junta os Cards de um assunto. Depois de criar, você já começa a escrever os Cards.', `<button data-act="novo-deck" class="${btn('primary', 'md', 'mt-4')}">${ic('plus', 'h-4 w-4')}Novo Deck</button>`);
+const semCards = () => empty('inbox', 'Nenhum Card ainda', DECKS.length ? 'Escolha um Deck e escreva os primeiros Cards.' : 'Crie um Deck para começar a escrever Cards.', `<button data-act="${DECKS.length ? 'tab:decks' : 'novo-deck'}" class="${btn('primary', 'md', 'mt-4')}">${DECKS.length ? 'Ver Decks' : `${ic('plus', 'h-4 w-4')}Novo Deck`}</button>`);
+
+// menu "⋯" do Deck (Renomear, Apagar)
+const deckMenu = (align = 'right-0') => S.open !== 'deckmenu' ? '' : `
+  <div class="absolute ${align} top-full z-40 mt-2 w-52 rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop">
+    <button data-act="deck-renomear" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('pencil', 'h-4 w-4')}Renomear Deck</button>
+    <button data-act="deck-apagar" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10">${ic('trash', 'h-4 w-4')}Apagar Deck</button>
+  </div>`;
+
+/* ---------- Comments (lista cronológica, o mais antigo em cima) ---------- */
+function commentItems(c, compact = false) {
+  if (!c.cm.length) return `<p class="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">Nenhum Comment ainda. Anote uma dica, uma fonte ou o que confundiu você.</p>`;
+  return `<ol class="space-y-2.5">${c.cm.map((m, i) => S.editIdx === i ? `
+    <li><form data-form="comment-edit" class="rounded-lg border bg-background p-2">
+      <textarea data-edit data-fkey="cm-edit" rows="3" class="w-full resize-none bg-transparent px-1.5 py-1 text-base outline-none md:text-sm">${esc(S.editTxt)}</textarea>
+      <div class="flex justify-end gap-2"><button type="button" data-act="cedit-cancel" class="${btn('ghost', 'sm')}">Cancelar</button><button class="${btn('primary', 'sm')}">Salvar</button></div>
+    </form></li>` : `
+    <li class="group rounded-lg bg-muted/60 px-3.5 py-2.5">
+      <p class="text-sm">${S.q ? hl(m.txt, S.q) : esc(m.txt)}</p>
+      <div class="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+        <span>${esc(m.quando)}</span>
+        <span class="ml-auto flex gap-3 ${compact ? '' : 'md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'}">
+          <button data-act="cedit:${i}" class="hover:text-foreground">Editar</button>
+          <button data-act="cdel:${i}" class="hover:text-destructive">Apagar</button>
+        </span>
+      </div>
+    </li>`).join('')}</ol>`;
+}
+const commentForm = (fkey, extra = '') => `
+  <form data-form="comment" class="flex items-end gap-2 ${extra}">
+    <textarea data-draft data-fkey="${fkey}" rows="1" placeholder="Escreva um Comment…" aria-label="Novo Comment" class="min-h-10 w-full resize-none rounded-[1.25rem] border border-input bg-background px-4 py-2.5 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm">${esc(S.draft)}</textarea>
+    <button class="${btn('primary', 'icon')}" aria-label="Salvar Comment" ${S.draft.trim() ? '' : 'disabled'}>${ic('send', 'h-4 w-4')}</button>
+  </form>`;
+
+/* ---------- detalhes do Card reaproveitados ---------- */
+const qa = (c, pad = 'p-5') => `
+  <div class="rounded-lg border bg-card shadow-card">
+    <div class="${pad}"><p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">Pergunta</p><div class="rt font-display text-lg font-medium leading-snug">${c.q}</div></div>
+    <div class="border-t ${pad}"><p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">Resposta</p><div class="rt">${c.a}</div></div>
+  </div>`;
+const metaRows = (c) => [
+  ['Deck', `<button data-act="cmover" class="inline-flex items-center gap-1 font-medium hover:underline">${esc(deckOf(c.deck).n)}${ic('updown', 'h-3.5 w-3.5 text-muted-foreground')}</button>`],
+  ['Labels', `<div class="flex flex-wrap items-center gap-1.5">${c.labels.map((l) => chip(l)).join('')}<button data-act="clabels" class="inline-flex items-center gap-1 rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground">${ic('plus', 'h-3 w-3')}${c.labels.length ? 'Editar' : 'Label'}</button></div>`],
+  ['Estado', `<span>${ESTADOS[c.st]}</span>`],
+  ['Próxima revisão', `<span class="flex flex-wrap items-center gap-2">${dueBadge(c)}<span class="${c.due !== null && c.due < 0 ? 'text-destructive' : ''}">${dueText(c, true)}</span></span>${c.st === 'novo' && c.reset ? `<span class="mt-1 block text-xs text-muted-foreground">Agendamento reiniciado em ${c.reset}</span>` : ''}`],
+];
+const metaList = (c, cls = '') => `<dl class="grid grid-cols-[7.5rem_1fr] gap-x-3 gap-y-3 text-sm ${cls}">${metaRows(c).map(([k, v]) => `<dt class="pt-0.5 text-muted-foreground">${k}</dt><dd class="min-w-0">${v}</dd>`).join('')}</dl>`;
+
+/* ---------- shell (igual ao Início) ---------- */
+const NAV = [
+  { id: 'inicio', label: 'Início', icon: 'home' },
+  { id: 'decks', label: 'Decks', icon: 'layers' },
+  { id: 'progresso', label: 'Progresso', icon: 'chart' },
+  { id: 'config', label: 'Configurações', icon: 'sliders' },
+];
+function avatarMenu() {
+  if (S.open !== 'avatar') return '';
+  return `
+  <div class="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop">
+    <div class="px-3 py-2"><p class="text-sm font-medium">Ana Souza</p><p class="text-xs text-muted-foreground">ana@exemplo.com</p></div>
+    <div class="my-1 h-px bg-border"></div>
+    <button data-act="nav:config" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('sliders', 'h-4 w-4')}Configurações</button>
+    <button data-ir="auth.html" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('logout', 'h-4 w-4')}Sair</button>
+  </div>`;
+}
+// mobile: subpágina troca o título grande por "voltar" + título
+const shell = (content, { back = null, title = 'Decks', fab = true } = {}) => `
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-30 bg-background/90 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:h-20 md:px-6">
+        ${back
+          ? `<button data-act="back" class="-ml-2 grid h-10 w-10 shrink-0 place-items-center rounded-full hover:bg-accent md:hidden" aria-label="Voltar">${ic('back')}</button><h1 class="min-w-0 flex-1 truncate font-display text-lg font-semibold md:hidden">${esc(title)}</h1>`
+          : `<h1 class="font-display text-2xl font-semibold md:hidden">${esc(title)}</h1>`}
+        <a class="hidden items-center gap-2 font-display text-2xl font-semibold tracking-tight text-primary md:inline-flex">${daruma()}Daruma</a>
+        <nav class="mx-auto hidden items-center rounded-full bg-muted p-1 text-sm md:flex">
+          ${NAV.map((x) => `<button data-act="nav:${x.id}" class="rounded-full px-4 py-1.5 transition ${x.id === 'decks' ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}">${x.label}</button>`).join('')}
+        </nav>
+        <div class="ml-auto flex items-center gap-2 md:ml-0">
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:novo" class="${btn('primary', 'md')}">${ic('plus', 'h-4 w-4')}Novo</button>${cabecalho.novoMenu(ic, S.open === 'novo')}</div>
+          <div class="relative" data-keep>
+            <button data-act="toggle:bell" class="relative grid h-10 w-10 place-items-center rounded-full border bg-card hover:bg-accent" aria-label="Notificações">${ic('bell', 'h-[18px] w-[18px]')}${S.dados === 'cheio' && !S.bellSeen ? '<span class="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-primary ring-2 ring-background"></span>' : ''}</button>${cabecalho.sinoMenu(ic, S.open === 'bell', S.dados !== 'cheio')}
+          </div>
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:avatar" class="grid h-10 w-10 place-items-center rounded-full bg-accent font-display text-sm font-semibold text-accent-foreground">AS</button>${avatarMenu()}</div>
+        </div>
+      </div>
+    </header>
+    <main class="mx-auto max-w-5xl px-5 pb-40 pt-2 md:px-6 md:pb-28 md:pt-6">${back ? '' : emailNotice()}${content}</main>
+    <nav class="fixed inset-x-0 bottom-0 z-30 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_hsl(var(--border))] md:hidden">
+      <div class="grid grid-cols-4 pb-1 pt-2">
+        ${NAV.map((x) => `<button data-act="nav:${x.id}" class="flex flex-col items-center gap-1 text-[11px] font-medium ${x.id === 'decks' ? 'text-foreground' : 'text-muted-foreground'}"><span class="grid h-8 w-14 place-items-center rounded-full ${x.id === 'decks' ? 'bg-primary/15 text-primary' : ''}">${ic(x.icon)}</span>${x.label}</button>`).join('')}
+      </div>
+    </nav>
+    ${fab ? `<button data-act="toggle:novo-sheet" class="fixed bottom-24 right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-pop md:hidden">${ic('plus', 'h-5 w-5')}Novo</button>` : ''}
+  </div>`;
+
+const emailNotice = () => !S.email ? '' : `
+  <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm md:mb-6">
+    <span class="text-warning">${ic('mail', 'h-5 w-5')}</span>
+    <p class="min-w-0 flex-1">Confirme seu e-mail para receber o aviso da revisão de hoje.</p>
+    <button data-act="reenviar" class="font-medium text-warning underline-offset-4 hover:underline">Reenviar</button>
+  </div>`;
+
+/* ---------- Pilha: cada nível é uma página; chips com menu; Labels em página própria ---------- */
+function chipMenuA(key, label, active, options) {
+  const on = S.open === 'f:' + key;
+  return `
+  <div class="relative" data-keep>
+    <button data-act="toggle:f:${key}" aria-expanded="${on}" class="inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm transition ${active ? 'border-foreground bg-foreground text-background' : 'bg-card hover:bg-accent'}">
+      <span class="max-w-[10rem] truncate">${active ? esc(active) : label}</span>${ic('down', 'h-4 w-4 opacity-60')}
+    </button>
+    ${on ? `<div class="absolute left-0 top-full z-40 mt-2 w-64 max-w-[calc(100vw-2.5rem)] rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-pop">${options}</div>` : ''}
+  </div>`;
+}
+const optRow = (act, label, on, sub = '') => `
+  <button data-act="${act}" class="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm hover:bg-accent">
+    <span class="min-w-0 flex-1"><span class="block truncate ${on ? 'font-semibold' : ''}">${label}</span>${sub ? `<span class="block text-xs text-muted-foreground">${sub}</span>` : ''}</span>
+    <span class="w-4 text-primary">${on ? ic('check', 'h-4 w-4') : ''}</span>
+  </button>`;
+function filtersA() {
+  const inDeck = S.tela === 'deck';
+  const deckOpts = optRow('fdeck:', 'Todos os Decks', !S.f.deck) + DECKS.map((d) => optRow('fdeck:' + d.id, esc(d.n), S.f.deck === d.id, deckCountsLine(d.id))).join('');
+  const labelOpts = (LABELS.length ? optRow('flabel:', 'Qualquer Label', !S.f.label) + `<div class="max-h-60 overflow-y-auto">${LABELS.map((l) => optRow('flabel:' + l.id, esc(l.n), S.f.label === l.id, plural(labelCount(l.id), 'card', 'cards'))).join('')}</div>` : '<p class="px-2.5 py-3 text-sm text-muted-foreground">Nenhuma Label ainda.</p>')
+    + `<div class="mt-1 border-t pt-1"><button data-act="labels-page" class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-primary hover:bg-accent">${ic('tag', 'h-4 w-4')}Gerenciar Labels</button></div>`;
+  const estOpts = optRow('festado:', 'Qualquer estado', !S.f.estado) + Object.entries(ESTADOS).map(([k, l]) => optRow('festado:' + k, l, S.f.estado === k)).join('');
+  return `
+  <div class="flex flex-wrap items-center gap-2">
+    ${inDeck ? '' : chipMenuA('deck', 'Deck', S.f.deck && deckOf(S.f.deck).n, deckOpts)}
+    ${chipMenuA('label', 'Label', S.f.label && labelOf(S.f.label).n, labelOpts)}
+    ${chipMenuA('estado', 'Estado', S.f.estado && ESTADOS[S.f.estado], estOpts)}
+    <button data-act="fhoje" aria-pressed="${S.f.hoje}" class="inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm transition ${S.f.hoje ? 'border-foreground bg-foreground text-background' : 'bg-card hover:bg-accent'}">${S.f.hoje ? ic('check', 'h-4 w-4') : ''}Vencido hoje</button>
+    ${anyFilter() ? `<button data-act="flimpar" class="${btn('link', 'sm', 'px-1')}">Limpar</button>` : ''}
+  </div>`;
+}
+function cardRowA(x, showDeck) {
+  const { c, m } = x, on = S.sel.includes(c.id), showCheck = S.selMode || S.sel.length;
+  const second = m.where === 'a' || m.where === 'c' ? snippet(m.text, S.q) : esc(plain(c.a));
+  return `
+  <li class="flex items-start gap-3 px-4 py-3.5 transition ${on ? 'bg-primary/5' : 'hover:bg-accent/50'}">
+    ${checkbox(on, 'sel:' + c.id, 'Selecionar Card', `mt-0.5 ${showCheck ? '' : 'hidden md:grid'}`)}
+    <button data-act="${showCheck && S.selMode ? 'sel:' + c.id : 'card:' + c.id}" class="min-w-0 flex-1 text-left">
+      <p class="line-clamp-2 text-sm font-medium">${hl(plain(c.q), S.q)}</p>
+      <p class="mt-0.5 line-clamp-1 text-sm text-muted-foreground">${m.where && m.where !== 'q' ? `<span class="font-medium">${whereNote(m)}:</span> ` : ''}${second}</p>
+      <div class="mt-2 flex flex-wrap items-center gap-1.5">
+        ${dueBadge(c)}${c.labels.map((l) => chip(l)).join('')}
+        ${showDeck ? `<span class="text-xs text-muted-foreground">${esc(deckOf(c.deck).n)}</span>` : ''}
+        ${c.cm.length ? `<span class="inline-flex items-center gap-1 text-xs text-muted-foreground">${ic('msg', 'h-3.5 w-3.5')}${n(c.cm.length)}</span>` : ''}
+      </div>
+    </button>
+  </li>`;
+}
+function selBarA(rows) {
+  const all = rows.length && rows.every((x) => S.sel.includes(x.c.id));
+  if (!S.sel.length) return `
+    <div class="flex h-11 items-center gap-3 text-sm text-muted-foreground">
+      <span class="hidden md:inline-flex">${checkbox(false, 'selall', 'Selecionar todos')}</span>
+      <span>${resultLine(rows.length)}</span>
+      ${S.selMode ? `<button data-act="selclear" class="${btn('ghost', 'sm', 'ml-auto')}">Cancelar</button>` : `<button data-act="selmode" class="${btn('ghost', 'sm', 'ml-auto md:hidden')}">Selecionar</button>`}
+    </div>`;
+  return `
+    <div class="sticky top-16 z-20 -mx-2 flex h-12 items-center gap-1 rounded-full bg-foreground px-2 text-sm text-background shadow-pop md:top-20">
+      ${checkbox(all, 'selall', 'Selecionar todos', 'ml-1.5 border-background/40', !all)}
+      <span class="ml-2 mr-auto font-medium">${n(S.sel.length)} <span class="hidden sm:inline">selecionado${S.sel.length === 1 ? '' : 's'}</span></span>
+      <button data-act="bulk:mover" class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 hover:bg-background/15">${ic('move', 'h-4 w-4')}<span class="hidden sm:inline">Mover</span></button>
+      <button data-act="bulk:labels" class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 hover:bg-background/15">${ic('tag', 'h-4 w-4')}<span class="hidden sm:inline">Label</span></button>
+      <button data-act="bulk:apagar" class="inline-flex h-9 items-center gap-1.5 rounded-full px-3 hover:bg-background/15">${ic('trash', 'h-4 w-4')}<span class="hidden sm:inline">Apagar</span></button>
+      <button data-act="selclear" class="grid h-9 w-9 place-items-center rounded-full hover:bg-background/15" aria-label="Cancelar seleção">${ic('x', 'h-4 w-4')}</button>
+    </div>`;
+}
+function cardsListA() {
+  const inDeck = S.tela === 'deck';
+  if (!CARDS.length && !inDeck) return semCards();
+  if (inDeck && !counts(S.deckId).total) return deckVazio();
+  const rows = list();
+  return `
+    <div class="space-y-3">${searchBox('qa')}${filtersA()}</div>
+    <div class="mt-3">${selBarA(rows)}</div>
+    ${rows.length ? `<ul class="mt-1 divide-y overflow-hidden rounded-lg border bg-card shadow-card">${rows.map((x) => cardRowA(x, !inDeck)).join('')}</ul>` : `<div class="mt-2">${noResults()}</div>`}`;
+}
+function decksA() {
+  const head = `
+    <div class="mb-5 flex items-center gap-3">
+      <h2 class="hidden font-display text-3xl font-semibold tracking-tight md:block">Decks</h2>
+      ${pillTabs('md:ml-6')}
+      ${S.tela === 'decks' && DECKS.length ? `<button data-act="novo-deck" class="${btn('outline', 'md', 'ml-auto hidden sm:inline-flex')}">${ic('plus', 'h-4 w-4')}Novo Deck</button>` : ''}
+    </div>`;
+  if (S.tela === 'cards') return head + cardsListA();
+  if (!DECKS.length) return head + semDecks();
+  return head + `
+    <ul class="divide-y overflow-hidden rounded-lg border bg-card shadow-card">
+      ${DECKS.map((d) => `
+        <li><button data-act="deck:${d.id}" class="flex w-full items-center gap-4 px-4 py-4 text-left hover:bg-accent/50">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">${ic('layers', 'h-4 w-4')}</span>
+          <span class="min-w-0 flex-1"><span class="block truncate font-medium">${esc(d.n)}</span><span class="block text-sm text-muted-foreground">${deckCountsLine(d.id)}</span>${hojeBadge(d.id) ? `<span class="mt-1.5 flex sm:hidden">${hojeBadge(d.id)}</span>` : ''}</span>
+          <span class="hidden sm:flex">${hojeBadge(d.id)}</span>
+          <span class="text-muted-foreground">${ic('right', 'h-5 w-5')}</span>
+        </button></li>`).join('')}
+    </ul>`;
+}
+function deckA() {
+  const d = deckOf(S.deckId), k = counts(d.id);
+  const stat = (v, l, cls = '') => `<div class="flex-1 px-4 py-3 first:pl-0"><p class="font-display text-2xl font-semibold tnum ${cls}">${v}</p><p class="text-xs text-muted-foreground">${l}</p></div>`;
+  return `
+    <button data-act="back" class="mb-4 hidden items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground md:inline-flex">${ic('back', 'h-4 w-4')}Decks</button>
+    <div class="mb-6">
+      <div class="flex items-start gap-3">
+        <h2 class="min-w-0 flex-1 font-display text-2xl font-semibold tracking-tight md:text-3xl">${esc(d.n)}</h2>
+        <div class="relative" data-keep><button data-act="toggle:deckmenu" class="${btn('ghost', 'icon', '-mr-2')}" aria-label="Mais ações do Deck">${ic('dots')}</button>${deckMenu()}</div>
+      </div>
+      <div class="mt-3 flex max-w-md divide-x">${stat(k.hoje, 'para hoje', k.hoje ? 'text-warning' : '')}${stat(k.novos, 'novos')}${stat(k.total, 'cards')}</div>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button data-act="estudar" class="${btn('primary', 'md', 'flex-1 sm:flex-none')}" ${k.hoje + k.novos ? '' : 'disabled'}>${ic('play', 'h-4 w-4')}Estudar</button>
+        <button data-act="adicionar" class="${btn('outline', 'md', 'flex-1 sm:flex-none')}">${ic('plus', 'h-4 w-4')}Adicionar Cards</button>
+        <button data-act="ver-progresso" class="${btn('link', 'md', 'w-full sm:w-auto')}">Ver progresso ${ic('arrow', 'h-4 w-4')}</button>
+      </div>
+    </div>
+    ${cardsListA()}`;
+}
+function cardA() {
+  const c = cardOf(S.cardId), d = deckOf(c.deck);
+  return `
+    <button data-act="back" class="mb-4 hidden items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground md:inline-flex">${ic('back', 'h-4 w-4')}${S.tela === 'deck' ? esc(d.n) : 'Cards'}</button>
+    <div class="mx-auto max-w-2xl">
+      <div class="mb-3 flex items-center gap-2">
+        <p class="min-w-0 flex-1 truncate text-sm text-muted-foreground">${esc(d.n)}</p>
+        <button data-act="editar" class="${btn('outline', 'sm')}">${ic('pencil', 'h-3.5 w-3.5')}Editar</button>
+        <div class="relative" data-keep>
+          <button data-act="toggle:cardmenu" class="${btn('ghost', 'iconsm')}" aria-label="Mais ações do Card">${ic('dots', 'h-4 w-4')}</button>
+          ${S.open === 'cardmenu' ? `
+          <div class="absolute right-0 top-full z-40 mt-2 w-52 rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop">
+            <button data-act="cmover" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('move', 'h-4 w-4')}Mover para Deck</button>
+            <button data-act="clabels" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('tag', 'h-4 w-4')}Labels</button>
+            ${c.st !== 'novo' ? `<button data-act="creiniciar" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('rotate', 'h-4 w-4')}Reiniciar agendamento</button>` : ''}
+            <button data-act="capagar" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10">${ic('trash', 'h-4 w-4')}Apagar Card</button>
+          </div>` : ''}
+        </div>
+      </div>
+      ${qa(c)}
+      ${metaList(c, 'mt-6 px-1')}
+      <section class="mt-8">
+        <h3 class="mb-3 font-display text-lg font-semibold">Comments ${c.cm.length ? `<span class="text-muted-foreground tnum">${c.cm.length}</span>` : ''}</h3>
+        ${commentItems(c)}
+        ${commentForm('cm-a', 'mt-3')}
+      </section>
+    </div>`;
+}
+function labelsPageA() {
+  return `
+    <button data-act="back" class="mb-4 hidden items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground md:inline-flex">${ic('back', 'h-4 w-4')}Cards</button>
+    <div class="mx-auto max-w-xl">
+      <h2 class="hidden font-display text-3xl font-semibold tracking-tight md:block">Labels</h2>
+      <p class="mb-5 text-sm text-muted-foreground md:mt-1">Uma Label marca Cards de qualquer Deck. Apagar a Label não apaga os Cards.</p>
+      ${labelsManager()}
+    </div>`;
+}
+function varA() {
+  if (S.cardId) return shell(cardA(), { back: true, title: 'Card', fab: false });
+  if (S.labelsPage) return shell(labelsPageA(), { back: true, title: 'Labels', fab: false });
+  if (S.tela === 'deck') return shell(deckA(), { back: true, title: deckOf(S.deckId).n });
+  return shell(decksA());
+}
+
+/* ---------- gestão de Labels (página própria) ---------- */
+function labelsManager() {
+  return `
+    <form data-form="new-label" class="flex gap-2">
+      <input data-mq data-fkey="newlabel" class="${INPUT} rounded-btn px-4" placeholder="Nova Label" value="${esc(S.mq)}" aria-label="Nome da nova Label">
+      <button class="${btn('primary', 'md')}" ${S.mq.trim() ? '' : 'disabled'}>Criar</button>
+    </form>
+    <ul class="mt-4 divide-y rounded-lg border bg-card">
+      ${LABELS.length ? LABELS.map((l) => S.rn === l.id ? `
+        <li class="p-2"><form data-form="rename-label" class="flex gap-2">
+          <input data-rn data-fkey="rn-${l.id}" class="${INPUT}" value="${esc(S.rnTxt)}" aria-label="Novo nome da Label">
+          <button type="button" data-act="lrn-cancel" class="${btn('ghost', 'md')}">Cancelar</button><button class="${btn('primary', 'md')}">Salvar</button>
+        </form></li>` : `
+        <li class="flex items-center gap-3 px-4 py-2.5">
+          ${ic('tag', 'h-4 w-4 text-muted-foreground')}
+          <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">${esc(l.n)}</span><span class="block text-xs text-muted-foreground">${plural(labelCount(l.id), 'card', 'cards')}</span></span>
+          <button data-act="lrn:${l.id}" class="${btn('ghost', 'iconsm')}" aria-label="Renomear ${esc(l.n)}">${ic('pencil', 'h-4 w-4')}</button>
+          <button data-act="ldel:${l.id}" class="${btn('ghost', 'iconsm', 'hover:text-destructive')}" aria-label="Apagar ${esc(l.n)}">${ic('trash', 'h-4 w-4')}</button>
+        </li>`).join('') : '<li class="px-4 py-6 text-center text-sm text-muted-foreground">Nenhuma Label ainda. Crie uma acima ou ao editar um Card.</li>'}
+    </ul>`;
+}
+
+/* ---------- diálogos: centrados no desktop, folha no mobile ---------- */
+const sheet = (inner, wide = false) => `
+  <div class="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center sm:p-4">
+    <div class="absolute inset-0 bg-black/40" data-act="mclose"></div>
+    <div data-keep role="dialog" aria-modal="true" class="relative flex max-h-[85dvh] w-full flex-col rounded-t-xl border bg-popover pb-[env(safe-area-inset-bottom)] text-popover-foreground shadow-pop sm:rounded-xl ${wide ? 'sm:max-w-lg' : 'sm:max-w-md'}">
+      <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-border sm:hidden"></div>
+      ${inner}
+    </div>
+  </div>`;
+const sheetHead = (title, sub = '') => `
+  <div class="flex items-start gap-3 px-5 pb-3 pt-4">
+    <div class="min-w-0 flex-1"><h2 class="font-display text-lg font-semibold">${title}</h2>${sub ? `<p class="text-sm text-muted-foreground">${sub}</p>` : ''}</div>
+    <button data-act="mclose" class="${btn('ghost', 'iconsm', '-mr-2')}" aria-label="Fechar">${ic('x', 'h-4 w-4')}</button>
+  </div>`;
+const quem = (ids) => ids.length === 1 ? 'este Card' : `${n(ids.length)} Cards`;
+function modal() {
+  const M = S.modal;
+  if (!M) return '';
+  if (M.kind === 'mover') {
+    const cur = new Set(M.ids.map((id) => cardOf(id).deck));
+    const rows = DECKS.filter((d) => !S.mq || semAcento(d.n).includes(semAcento(S.mq)));
+    return sheet(sheetHead('Mover para Deck', `Mover ${quem(M.ids)}. O agendamento não muda.`) + `
+      <div class="px-5"><input data-mq data-fkey="mq" class="${INPUT} rounded-btn px-4" placeholder="Buscar Deck…" value="${esc(S.mq)}" aria-label="Buscar Deck"></div>
+      <div class="mt-2 overflow-y-auto px-3 pb-4">${rows.map((d) => {
+        const here = cur.size === 1 && cur.has(d.id);
+        return `<button data-act="mv:${d.id}" ${here ? 'disabled' : ''} class="flex w-full items-center gap-3 rounded-md px-2.5 py-2.5 text-left hover:bg-accent disabled:opacity-60">
+          <span class="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-primary">${ic('layers', 'h-4 w-4')}</span>
+          <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">${esc(d.n)}</span><span class="block text-xs text-muted-foreground">${here ? 'Deck atual' : plural(counts(d.id).total, 'card', 'cards')}</span></span>
+        </button>`; }).join('') || '<p class="py-6 text-center text-sm text-muted-foreground">Nenhum Deck encontrado.</p>'}</div>`);
+  }
+  if (M.kind === 'labels') {
+    const cs = M.ids.map(cardOf);
+    const q = S.mq.trim();
+    const rows = LABELS.filter((l) => !q || semAcento(l.n).includes(semAcento(q)));
+    const exact = LABELS.some((l) => semAcento(l.n) === semAcento(q));
+    return sheet(sheetHead('Labels', M.ids.length === 1 ? 'Marque as Labels deste Card.' : `Para ${quem(M.ids)}. O traço indica que só alguns têm a Label.`) + `
+      <div class="px-5"><input data-mq data-fkey="mq" class="${INPUT} rounded-btn px-4" placeholder="Buscar ou criar Label…" value="${esc(S.mq)}" aria-label="Buscar ou criar Label"></div>
+      <div class="mt-2 overflow-y-auto px-3">
+        ${rows.map((l) => { const k = cs.filter((c) => c.labels.includes(l.id)).length; return `
+          <div class="flex items-center gap-3 rounded-md px-2.5 py-2 hover:bg-accent">
+            ${checkbox(k === cs.length, 'lb:' + l.id, l.n, '', k > 0 && k < cs.length)}
+            <button data-act="lb:${l.id}" class="flex-1 text-left text-sm">${esc(l.n)}</button>
+            <span class="text-xs text-muted-foreground tnum">${labelCount(l.id)}</span>
+          </div>`; }).join('')}
+        ${q && !exact ? `<button data-act="lbnew" class="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm text-primary hover:bg-accent">${ic('plus', 'h-4 w-4')}Criar Label “${esc(q)}”</button>` : ''}
+        ${!rows.length && !q ? '<p class="py-6 text-center text-sm text-muted-foreground">Nenhuma Label ainda. Digite um nome para criar.</p>' : ''}
+      </div>
+      <div class="flex justify-end border-t px-5 py-3 mt-2"><button data-act="mclose" class="${btn('primary', 'md')}">Pronto</button></div>`);
+  }
+  if (M.kind === 'confirm') {
+    return sheet(`
+      <div class="p-6">
+        <h2 class="font-display text-lg font-semibold">${M.title}</h2>
+        <p class="mt-2 text-sm text-muted-foreground">${M.body}</p>
+        <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button data-act="mclose" class="${btn('outline')}">Cancelar</button>
+          <button data-act="${M.ok}" class="${btn('destructive')}">${M.okLabel}</button>
+        </div>
+      </div>`);
+  }
+  if (M.kind === 'rename-deck') {
+    return sheet(sheetHead('Renomear Deck') + `
+      <form data-form="rename-deck" class="px-5 pb-5">
+        <input data-mq data-fkey="mq" class="${INPUT}" value="${esc(S.mq)}" aria-label="Nome do Deck">
+        <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" data-act="mclose" class="${btn('outline')}">Cancelar</button><button class="${btn('primary')}" ${S.mq.trim() ? '' : 'disabled'}>Salvar</button>
+        </div>
+      </form>`);
+  }
+  return '';
+}
+
+/* ---------- toasts ---------- */
+function toasts() {
+  return `<div class="pointer-events-none fixed inset-x-3 bottom-24 z-[70] flex flex-col gap-2 md:inset-x-auto md:bottom-6 md:right-6 md:w-96" aria-live="polite">
+    ${S.toasts.map((t) => `
+      <div class="pointer-events-auto flex items-center gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-pop">
+        <span class="text-success">${ic('ok', 'h-5 w-5')}</span>
+        <p class="flex-1 text-sm">${t.msg}</p>
+        ${t.undo ? `<button data-act="undo:${t.id}" class="${btn('outline', 'sm')}">Desfazer</button>` : ''}
+        <button data-act="toast-close:${t.id}" class="text-muted-foreground hover:text-foreground" aria-label="Fechar">${ic('x', 'h-4 w-4')}</button>
+      </div>`).join('')}
+  </div>`;
+}
+const snap = () => JSON.stringify({ CARDS, DECKS, LABELS });
+function toast(msg, undo = null) {
+  const id = ++toastId;
+  S.toasts = S.toasts.slice(-2).concat({ id, msg, undo });
+  setTimeout(() => { S.toasts = S.toasts.filter((t) => t.id !== id); render(); }, 5000);
+}
+
+/* ---------- barra do protótipo (fora do design) ---------- */
+const GOTO = {
+  decks: ['Lista de Decks', { tela: 'decks' }],
+  cards: ['Aba Cards', { tela: 'cards' }],
+  busca: ['Busca “braquial”', { tela: 'cards', q: 'braquial' }],
+  deck: ['Detalhe do Deck', { tela: 'deck', deckId: 'anatomia' }],
+  card: ['Card com Comments', { tela: 'deck', deckId: 'anatomia', cardId: 'biceps' }],
+  reiniciado: ['Card reiniciado', { tela: 'deck', deckId: 'ingles', cardId: 'lookafter' }],
+  sel: ['Seleção em massa', { tela: 'cards', sel: ['biceps', 'mitral', 'aurea'] }],
+  labels: ['Labels', { tela: 'cards', labels: true }],
+  vazio: ['Deck vazio', { tela: 'deck', deckId: 'quimica' }],
+};
+function switcher() {
+  const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
+  return `
+  <div data-keep class="fixed bottom-[5.5rem] left-3 right-3 z-[100] flex flex-wrap items-center justify-center gap-1 rounded-3xl bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:flex-nowrap md:rounded-full md:px-2 md:py-1.5" style="font-family:system-ui,sans-serif">
+    <select data-sel="goto" class="h-8 max-w-[11rem] rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Ir para tela">
+      <option value="">Ir para…</option>
+      ${Object.entries(GOTO).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}
+    </select>
+    <select data-sel="dados" class="h-8 rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Dados">
+      <option value="cheio" ${S.dados === 'cheio' ? 'selected' : ''}>Com Decks</option>
+      <option value="vazio" ${S.dados === 'vazio' ? 'selected' : ''}>Conta nova</option>
+    </select>
+    <button data-act="tema" class="${b}" aria-label="Trocar tema" title="Tema">${ic(S.tema === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
+    <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+function screen() {
+  return varA() + cabecalho.novoSheet(ic, S.open === 'novo-sheet') + modal() + toasts();
+}
+function render() {
+  document.documentElement.classList.toggle('dark', S.tema === 'escuro');
+  const app = document.getElementById('app');
+  if (S.frame === 'mobile' && !S.embed) {
+    const src = '?' + params({ embed: '1' });
+    const frame = app.querySelector('iframe');
+    if (!frame || frame.dataset.src !== src) app.innerHTML = `
+      <div class="grid min-h-screen place-items-center bg-muted p-6 pb-24">
+        <iframe data-src="${src}" src="${src}" title="Mobile 390px" class="h-[844px] max-h-[calc(100vh-7rem)] w-[390px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-background shadow-2xl"></iframe>
+      </div>`;
+  } else {
+    app.innerHTML = screen();
+    // mantém o foco no campo que estava sendo digitado
+    if (S.focusKey) {
+      const el = app.querySelector(`[data-fkey="${S.focusKey}"]`);
+      if (el) { el.focus({ preventScroll: true }); if (S.focusPos != null && el.setSelectionRange) el.setSelectionRange(S.focusPos, S.focusPos); }
+    }
+  }
+  document.getElementById('switcher').innerHTML = S.embed ? '' : switcher();
+}
+function go(patch) {
+  Object.assign(S, { cardId: null, sel: [], selMode: false, open: null, labelsPage: false, modal: null, editIdx: null }, patch);
+  syncURL();
+}
+function resetFilters() { S.f = { deck: null, label: null, estado: null, hoje: false }; }
+function openModal(kind, extra = {}) { S.modal = { kind, ...extra }; S.mq = extra.mq || ''; S.open = null; S.focusKey = null; }
+const leave = (url) => { location.href = url + (url.includes('?') ? '&' : '?') + `tema=${S.tema}${S.embed ? '&embed=1' : ''}`; };
+
+/* ---------- ações ---------- */
+function act(k, arg, el) {
+  switch (k) {
+    case 'tema': S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; syncURL(); break;
+    case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
+    case 'toggle': { const key = el.dataset.act.slice(7); S.open = S.open === key ? null : key; if (key === 'bell') S.bellSeen = true; break; }
+    case 'close': S.open = null; break;
+    case 'nav':
+      if (arg === 'inicio') return leave('home.html');
+      if (arg === 'progresso') return leave('progresso.html');
+      if (arg === 'decks') { resetFilters(); S.q = ''; go({ tela: 'decks', deckId: null }); break; }
+      return leave('configuracoes.html');
+    case 'reenviar': toast('Enviamos um novo link para ana@exemplo.com.'); break;
+    case 'tab': resetFilters(); go({ tela: arg, deckId: null }); break;
+    case 'deck': resetFilters(); go({ tela: 'deck', deckId: arg }); scrollTo({ top: 0 }); break;
+    case 'card': S.cardId = arg; S.draft = ''; S.editIdx = null; S.open = null; syncURL(); scrollTo({ top: 0 }); break;
+    case 'back':
+      if (S.cardId) { S.cardId = null; syncURL(); break; }
+      if (S.labelsPage) { S.labelsPage = false; break; }
+      if (S.tela === 'deck') { resetFilters(); go({ tela: 'decks', deckId: null }); }
+      break;
+    case 'qclear': S.q = ''; S.focusKey = null; syncURL(); break;
+    case 'fdeck': S.f.deck = arg || null; S.open = null; S.sel = []; break;
+    case 'flabel': S.f.label = arg || null; S.open = null; S.sel = []; break;
+    case 'festado': S.f.estado = arg || null; S.open = null; S.sel = []; break;
+    case 'fhoje': S.f.hoje = !S.f.hoje; S.open = null; S.sel = []; break;
+    case 'flimpar': resetFilters(); S.q = ''; S.sel = []; syncURL(); break;
+    case 'sel': S.sel = S.sel.includes(arg) ? S.sel.filter((x) => x !== arg) : S.sel.concat(arg); break;
+    case 'selall': { const ids = list().map((x) => x.c.id); S.sel = ids.every((id) => S.sel.includes(id)) ? [] : ids; break; }
+    case 'selclear': S.sel = []; S.selMode = false; break;
+    case 'selmode': S.selMode = true; break;
+    case 'bulk':
+      if (arg === 'mover') openModal('mover', { ids: S.sel.slice() });
+      if (arg === 'labels') openModal('labels', { ids: S.sel.slice() });
+      if (arg === 'apagar') openModal('confirm', { ids: S.sel.slice(), title: `Apagar ${plural(S.sel.length, 'Card', 'Cards')}?`, body: 'Os Comments e o histórico de Ratings desses Cards também somem.', ok: 'ok-apagar', okLabel: 'Apagar' });
+      break;
+    case 'cmover': openModal('mover', { ids: [S.cardId] }); break;
+    case 'clabels': openModal('labels', { ids: [S.cardId] }); break;
+    case 'capagar': openModal('confirm', { ids: [S.cardId], title: 'Apagar este Card?', body: 'Os Comments e o histórico de Ratings dele também somem.', ok: 'ok-apagar', okLabel: 'Apagar Card' }); break;
+    case 'mclose': S.modal = null; S.mq = ''; S.focusKey = null; break;
+    case 'mv': {
+      const s = snap(), ids = S.modal.ids;
+      ids.forEach((id) => { cardOf(id).deck = arg; });
+      S.modal = null; S.sel = []; S.selMode = false;
+      toast(`${ids.length === 1 ? 'Card movido' : plural(ids.length, 'Card movido', 'Cards movidos')} para ${esc(deckOf(arg).n)}.`, s);
+      break;
+    }
+    case 'lb': {
+      const cs = S.modal.ids.map(cardOf), all = cs.every((c) => c.labels.includes(arg));
+      cs.forEach((c) => { c.labels = all ? c.labels.filter((l) => l !== arg) : c.labels.includes(arg) ? c.labels : c.labels.concat(arg); });
+      break;
+    }
+    case 'lbnew': {
+      const nm = S.mq.trim(), id = 'l' + Date.now();
+      LABELS.push({ id, n: nm });
+      S.modal.ids.map(cardOf).forEach((c) => c.labels.push(id));
+      S.mq = ''; toast(`Label “${esc(nm)}” criada.`);
+      break;
+    }
+    case 'ok-apagar': {
+      const s = snap(), ids = S.modal.ids;
+      CARDS = CARDS.filter((c) => !ids.includes(c.id));
+      if (ids.includes(S.cardId)) S.cardId = null;
+      S.modal = null; S.sel = []; S.selMode = false; syncURL();
+      toast(ids.length === 1 ? 'Card apagado.' : `${plural(ids.length, 'Card apagado', 'Cards apagados')}.`, s);
+      break;
+    }
+    case 'deck-renomear': openModal('rename-deck', { mq: deckOf(S.deckId).n }); S.focusKey = 'mq'; break;
+    case 'deck-apagar': {
+      const k = counts(S.deckId).total;
+      openModal('confirm', { title: `Apagar “${esc(deckOf(S.deckId).n)}”?`, body: k ? `Os ${plural(k, 'Card', 'Cards')} deste Deck também são apagados, com os Comments e o histórico. Para guardar algum, mova antes para outro Deck.` : 'O Deck está vazio.', ok: 'ok-apagar-deck', okLabel: 'Apagar Deck' });
+      break;
+    }
+    case 'ok-apagar-deck': {
+      const s = snap(), d = deckOf(S.deckId);
+      CARDS = CARDS.filter((c) => c.deck !== d.id); DECKS = DECKS.filter((x) => x.id !== d.id);
+      resetFilters(); go({ tela: 'decks', deckId: null });
+      toast(`Deck “${esc(d.n)}” apagado.`, s);
+      break;
+    }
+    case 'labels-page': S.labelsPage = true; S.open = null; S.mq = ''; S.rn = null; scrollTo({ top: 0 }); break;
+    case 'lrn': S.rn = arg; S.rnTxt = labelOf(arg).n; S.focusKey = 'rn-' + arg; S.focusPos = S.rnTxt.length; break;
+    case 'lrn-cancel': S.rn = null; S.focusKey = null; break;
+    case 'ldel': {
+      const l = labelOf(arg), k = labelCount(arg);
+      openModal('confirm', { title: `Apagar a Label “${esc(l.n)}”?`, body: k ? `Ela sai de ${plural(k, 'Card', 'Cards')}. Os Cards continuam onde estão.` : 'Nenhum Card usa esta Label.', ok: 'ok-ldel:' + arg, okLabel: 'Apagar Label' });
+      break;
+    }
+    case 'ok-ldel': {
+      const s = snap(), l = labelOf(arg);
+      LABELS = LABELS.filter((x) => x.id !== arg); CARDS.forEach((c) => { c.labels = c.labels.filter((x) => x !== arg); });
+      if (S.f.label === arg) S.f.label = null;
+      S.modal = null;
+      toast(`Label “${esc(l.n)}” apagada.`, s);
+      break;
+    }
+    case 'cedit': S.editIdx = Number(arg); S.editTxt = cardOf(S.cardId).cm[S.editIdx].txt; S.focusKey = 'cm-edit'; S.focusPos = S.editTxt.length; break;
+    case 'cedit-cancel': S.editIdx = null; S.focusKey = null; break;
+    case 'cdel': { const s = snap(); cardOf(S.cardId).cm.splice(Number(arg), 1); S.editIdx = null; toast('Comment apagado.', s); break; }
+    case 'undo': {
+      const t = S.toasts.find((x) => x.id == arg);
+      if (t) { const o = JSON.parse(t.undo); CARDS = o.CARDS; DECKS = o.DECKS; LABELS = o.LABELS; }
+      S.toasts = S.toasts.filter((x) => x.id != arg);
+      if (S.deckId && !deckOf(S.deckId)) S.deckId = null;
+      break;
+    }
+    case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
+    case 'estudar': return leave(`study-session.html?origem=deck&deck=${S.deckId}`);
+    case 'adicionar': return leave('editor-de-card.html?tela=lote');
+    case 'novo-deck': return leave('editor-de-card.html?tela=novo-deck');
+    case 'creiniciar': {
+      // Schedule Reset: sem diálogo; zera o agendamento e o Card entra no fim da fila de New Cards
+      const s = snap(), c = cardOf(S.cardId);
+      Object.assign(c, { st: 'novo', due: null, reset: '21 out' });
+      S.open = null;
+      toast('Agendamento reiniciado.', s);
+      break;
+    }
+    case 'editar': {
+      const c = cardOf(S.cardId), p = params(); p.delete('tema');
+      store.set('daruma:editar', { id: c.id, q: c.q, a: c.a, labels: c.labels.map((l) => labelOf(l).n), deck: deckOf(c.deck).n, rated: c.st !== 'novo', volta: 'decks.html?' + p });
+      return leave('editor-de-card.html?tela=editar&de=card');
+    }
+    case 'ver-progresso': return leave(`progresso.html?deck=${S.deckId}`);
+  }
+  return true;
+}
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) {
+    if (S.open && !e.target.closest('[data-keep]')) { S.open = null; render(); }
+    if (!e.target.closest('input, textarea')) S.focusKey = null;
+    return;
+  }
+  if (el.disabled) return;
+  const a = el.dataset.act, i = a.indexOf(':');
+  const k = i < 0 ? a : a.slice(0, i), arg = i < 0 ? '' : a.slice(i + 1);
+  if (!['lrn', 'cedit', 'deck-renomear'].includes(k)) S.focusKey = null;
+  if (act(k, arg, el)) render();
+});
+
+document.addEventListener('focusin', (e) => {
+  const k = e.target.dataset && e.target.dataset.fkey;
+  if (k) S.focusKey = k;
+});
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  S.focusKey = t.dataset.fkey || null; S.focusPos = t.selectionStart;
+  if (t.matches('[data-q]')) { S.q = t.value; S.sel = []; syncURL(); render(); }
+  else if (t.matches('[data-mq]')) { S.mq = t.value; render(); }
+  else if (t.matches('[data-rn]')) { S.rnTxt = t.value; }
+  else if (t.matches('[data-edit]')) { S.editTxt = t.value; }
+  else if (t.matches('[data-draft]')) { const was = !!S.draft.trim(); S.draft = t.value; if (was !== !!S.draft.trim()) render(); }
+});
+document.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const k = e.target.dataset.form;
+  if (k === 'comment' && S.draft.trim()) {
+    const now = new Date();
+    cardOf(S.cardId).cm.push({ quando: `Hoje · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, txt: S.draft.trim() });
+    S.draft = ''; toast('Comment salvo.');
+  }
+  if (k === 'comment-edit' && S.editTxt.trim()) { cardOf(S.cardId).cm[S.editIdx].txt = S.editTxt.trim(); S.editIdx = null; S.focusKey = null; toast('Comment salvo.'); }
+  if (k === 'new-label' && S.mq.trim()) {
+    const nm = S.mq.trim();
+    if (LABELS.some((l) => semAcento(l.n) === semAcento(nm))) { toast(`Já existe a Label “${esc(nm)}”.`); }
+    else { LABELS.unshift({ id: 'l' + Date.now(), n: nm }); S.mq = ''; toast(`Label “${esc(nm)}” criada.`); }
+  }
+  if (k === 'rename-label' && S.rnTxt.trim()) { labelOf(S.rn).n = S.rnTxt.trim(); S.rn = null; S.focusKey = null; toast('Label renomeada.'); }
+  if (k === 'rename-deck' && S.mq.trim()) { deckOf(S.deckId).n = S.mq.trim(); S.modal = null; S.mq = ''; S.focusKey = null; toast('Deck renomeado.'); }
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  // Enter salva o Comment; Shift+Enter quebra a linha
+  if (e.key === 'Enter' && !e.shiftKey && e.target.matches && e.target.matches('[data-draft]')) { e.preventDefault(); e.target.form.requestSubmit(); return; }
+  if (e.key === 'Escape') {
+    if (S.modal) { S.modal = null; S.focusKey = null; render(); return; }
+    if (S.open) { S.open = null; render(); return; }
+  }
+  const a = document.activeElement;
+  if (a && (a.matches('input, textarea, select') || a.isContentEditable)) return;
+});
+document.addEventListener('change', (e) => {
+  const k = e.target.dataset.sel;
+  if (k === 'goto') {
+    const g = GOTO[e.target.value];
+    if (!g || S.dados === 'vazio') { e.target.value = ''; return; }
+    const p = g[1];
+    resetFilters(); S.q = p.q || '';
+    go({ tela: p.tela, deckId: p.deckId || null, cardId: p.cardId || null, sel: p.sel || [] });
+    if (p.labels) S.labelsPage = true;
+    render();
+  }
+  if (k === 'dados') {
+    const p = params({ dados: e.target.value, tela: 'decks' }); p.delete('deck'); p.delete('card'); p.delete('q');
+    if (S.frame === 'mobile') p.set('frame', 'mobile');
+    location.search = '?' + p;
+  }
+});
+// parâmetros inválidos caem na lista de Decks
+if (S.deckId && !deckOf(S.deckId)) { S.deckId = null; S.tela = 'decks'; }
+if (S.tela === 'deck' && !S.deckId) S.tela = 'decks';
+if (S.cardId && !cardOf(S.cardId)) S.cardId = null;
+if (P.get('salvo') === '1' && S.cardId) toast('Card salvo.');
+syncURL();
+render();
+</script>
+</body>
+</html>

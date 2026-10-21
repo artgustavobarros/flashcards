@@ -1,0 +1,562 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Configurações e Review Time".
+  Pergunta: como é a tela de Configurações (Review Time, fuso, Novos por dia e pausa, avisos por e-mail e no app,
+  tema, conta com senha e Google, e-mail não confirmado, Sair)?
+  Decisão: variante "Lista" — linhas agrupadas por seção; cada valor abre um sheet e salva na hora, com "Desfazer".
+  As variantes descartadas (formulário com índice e barra "Salvar", frases com prévia do aviso) estão no branch prototype/configuracoes.
+  Parâmetros: ?conta=senha|google|ambos · ?email=pendente · ?novos=pausados · ?tema=claro|escuro|sistema · ?frame=mobile.
+  Base: prototype/fundacao-visual.html. Dados falsos, nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Configurações · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher"></div>
+
+<script>
+/* ---------- estado ---------- */
+const P = new URLSearchParams(location.search);
+const CONTAS = { senha: 'Conta com senha', google: 'Conta Google', ambos: 'Senha + Google' };
+const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const CFG0 = {
+  hora: '19:00', fusoAuto: true, fuso: 'America/Sao_Paulo', novos: 20,
+  emailOn: true, appOn: true,
+  tema: ['claro', 'escuro', 'sistema'].includes(P.get('tema')) ? P.get('tema') : 'sistema',
+  nome: 'Ana Souza',
+};
+const S = {
+  conta: CONTAS[P.get('conta')] ? P.get('conta') : 'senha',
+  email: P.get('email') === 'pendente',
+  pausados: P.get('novos') === 'pausados',
+  frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
+  embed: P.get('embed') === '1', bellSeen: false,
+  cfg: { ...CFG0 }, draft: { ...CFG0 },
+  open: null, modal: null, toasts: [],
+};
+let toastId = 0;
+
+const temSenha = () => S.conta !== 'google';
+const temGoogle = () => S.conta !== 'senha';
+const emailPend = () => S.email && S.conta !== 'google'; // conta Google já chega confirmada
+const temaEfetivo = () => S.draft.tema === 'sistema' ? (prefersDark ? 'escuro' : 'claro') : S.draft.tema;
+
+function syncURL() {
+  const p = new URLSearchParams({ conta: S.conta, tema: S.draft.tema });
+  p.set('email', S.email ? 'pendente' : 'ok');
+  p.set('novos', S.pausados ? 'pausados' : 'ativos');
+  if (S.frame === 'mobile') p.set('frame', 'mobile');
+  if (S.embed) p.set('embed', '1');
+  history.replaceState(null, '', '?' + p);
+}
+
+/* ---------- dados falsos ---------- */
+const FUSOS = [
+  ['America/Sao_Paulo', 'Horário de Brasília', 'GMT-3'],
+  ['America/Manaus', 'Amazonas', 'GMT-4'],
+  ['America/Rio_Branco', 'Acre', 'GMT-5'],
+  ['America/Noronha', 'Fernando de Noronha', 'GMT-2'],
+  ['Europe/Lisbon', 'Lisboa', 'GMT+0'],
+  ['America/New_York', 'Nova York', 'GMT-5'],
+];
+const fusoNome = (c = S.draft) => {
+  const f = FUSOS.find((x) => x[0] === c.fuso);
+  return c.fusoAuto ? `${f[1]} (automático)` : f[1];
+};
+const ATRASADOS = 64;
+const TEMAS = { claro: 'Claro', escuro: 'Escuro', sistema: 'Sistema' };
+
+/* ---------- ícones (traços estilo lucide) ---------- */
+const PATHS = {
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  minus: '<path d="M5 12h14"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  ok: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+  sparkles: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.56-2.5 5.56-5.55C21.97 6.01 17.46 2 12 2z"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  google: '<path d="M21.8 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.5a4.7 4.7 0 0 1-2 3.1v2.6h3.3c1.9-1.8 3-4.4 3-7.5Z"/><path d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.6c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6A10 10 0 0 0 12 22Z"/><path d="M6.4 13.9a6 6 0 0 1 0-3.8V7.5H3a10 10 0 0 0 0 9Z"/><path d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3 7.5l3.4 2.6C7.2 7.8 9.4 6 12 6Z"/>',
+};
+const ic = (n, cls = 'h-5 w-5') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${PATHS[n]}</svg>`;
+
+/* ---------- componentes base (da fundação visual) ---------- */
+const BTN_BASE = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-50';
+const BTN_SIZE = { sm: 'h-8 px-3 text-xs', md: 'h-10 px-4 text-sm', lg: 'h-12 px-6 text-base', icon: 'h-10 w-10' };
+const BTN_KIND = {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+  link: 'text-primary underline-offset-4 hover:underline',
+};
+const btn = (kind = 'primary', size = 'md', extra = '') => `${BTN_BASE} ${BTN_SIZE[size]} ${BTN_KIND[kind]} ${extra}`;
+const n = (v) => `<span class="font-mono tnum">${v}</span>`;
+const badge = (t, cls) => `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}">${t}</span>`;
+const INPUT = 'h-10 w-full rounded-md border border-input bg-background px-3 text-base md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+// switch: data-act="flip" data-k="<campo>"
+const sw = (k, on, disabled = false, label = '') => `
+  <button role="switch" aria-checked="${on}" aria-label="${label}" data-act="flip" data-k="${k}" ${disabled ? 'disabled' : ''}
+    class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${on ? 'bg-primary' : 'bg-input'}">
+    <span class="inline-block h-5 w-5 rounded-full bg-background shadow transition ${on ? 'translate-x-5' : 'translate-x-0.5'}"></span>
+  </button>`;
+
+// stepper do "Novos por dia": data-act="step"
+const stepper = (v, size = 'md') => `
+  <div class="inline-flex items-center rounded-full border border-input bg-background">
+    <button data-act="step" data-v="-5" class="grid ${size === 'lg' ? 'h-12 w-12' : 'h-9 w-9'} place-items-center rounded-full hover:bg-accent" aria-label="Menos 5" ${v <= 0 ? 'disabled' : ''}>${ic('minus', 'h-4 w-4')}</button>
+    <span class="${size === 'lg' ? 'w-16 text-2xl' : 'w-10 text-sm'} text-center font-display font-semibold tnum">${v}</span>
+    <button data-act="step" data-v="5" class="grid ${size === 'lg' ? 'h-12 w-12' : 'h-9 w-9'} place-items-center rounded-full hover:bg-accent" aria-label="Mais 5" ${v >= 200 ? 'disabled' : ''}>${ic('plus', 'h-4 w-4')}</button>
+  </div>`;
+
+const NAV = [
+  { id: 'inicio', label: 'Início', icon: 'home' },
+  { id: 'decks', label: 'Decks', icon: 'layers' },
+  { id: 'progresso', label: 'Progresso', icon: 'chart' },
+  { id: 'config', label: 'Configurações', icon: 'sliders' },
+];
+
+function avatarMenu() {
+  if (S.open !== 'avatar') return '';
+  return `
+  <div class="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop">
+    <div class="px-3 py-2"><p class="text-sm font-medium">${S.cfg.nome}</p><p class="text-xs text-muted-foreground">ana@exemplo.com</p></div>
+    <div class="my-1 h-px bg-border"></div>
+    <button data-act="close" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('sliders', 'h-4 w-4')}Configurações</button>
+    <button data-act="sair" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('logout', 'h-4 w-4')}Sair</button>
+  </div>`;
+}
+
+/* ---------- aviso de e-mail (abaixo do header, em todas as abas) ---------- */
+const emailNotice = () => !emailPend() ? '' : `
+  <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm md:mb-6">
+    <span class="text-warning">${ic('mail', 'h-5 w-5')}</span>
+    <p class="min-w-0 flex-1">Confirme seu e-mail para receber o aviso da revisão de hoje.</p>
+    <button data-act="reenviar" class="font-medium text-warning underline-offset-4 hover:underline">Reenviar</button>
+  </div>`;
+
+/* ---------- shell ---------- */
+const shell = (content, fab = true) => `
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-30 bg-background/90 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:h-20 md:px-6">
+        <h1 class="font-display text-2xl font-semibold md:hidden">Configurações</h1>
+        <a class="hidden items-center gap-2 font-display text-2xl font-semibold tracking-tight text-primary md:inline-flex">${daruma()}Daruma</a>
+        <nav class="mx-auto hidden items-center rounded-full bg-muted p-1 text-sm md:flex">
+          ${NAV.map((x) => `<button data-act="nav:${x.id}" class="rounded-full px-4 py-1.5 transition ${x.id === 'config' ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}">${x.label}</button>`).join('')}
+        </nav>
+        <div class="ml-auto flex items-center gap-2 md:ml-0">
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:novo" class="${btn('primary', 'md')}">${ic('plus', 'h-4 w-4')}Novo</button>${cabecalho.novoMenu(ic, S.open === 'novo')}</div>
+          <div class="relative" data-keep>
+            <button data-act="toggle:bell" class="relative grid h-10 w-10 place-items-center rounded-full border bg-card hover:bg-accent" aria-label="Notificações">${ic('bell', 'h-[18px] w-[18px]')}${!S.bellSeen ? '<span class="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-primary ring-2 ring-background"></span>' : ''}</button>${cabecalho.sinoMenu(ic, S.open === 'bell')}
+          </div>
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:avatar" class="grid h-10 w-10 place-items-center rounded-full bg-accent font-display text-sm font-semibold text-accent-foreground">AS</button>${avatarMenu()}</div>
+        </div>
+      </div>
+    </header>
+    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${emailNotice()}${content}</main>
+    <nav class="fixed inset-x-0 bottom-0 z-30 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_hsl(var(--border))] md:hidden">
+      <div class="grid grid-cols-4 pb-1 pt-2">
+        ${NAV.map((x) => `<button data-act="nav:${x.id}" class="flex flex-col items-center gap-1 text-[11px] font-medium ${x.id === 'config' ? 'text-foreground' : 'text-muted-foreground'}"><span class="grid h-8 w-14 place-items-center rounded-full ${x.id === 'config' ? 'bg-primary/15 text-primary' : ''}">${ic(x.icon)}</span>${x.label}</button>`).join('')}
+      </div>
+    </nav>
+    ${fab ? `<button data-act="toggle:novo-sheet" class="fixed bottom-24 right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-pop md:hidden">${ic('plus', 'h-5 w-5')}Novo</button>` : ''}
+  </div>`;
+
+/* ---------- textos comuns ---------- */
+const NOVOS_HINT = 'Quantos Cards novos entram na revisão de cada dia. Não vale para “Estudar agora”.';
+const pausaNota = (extra = '') => !S.pausados ? '' : `
+  <div class="${extra} flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md bg-warning/10 px-3 py-2.5 text-sm">
+    <span class="text-warning">${ic('pause', 'h-4 w-4')}</span>
+    <p class="min-w-0 flex-1">Novos pausados até você pôr a revisão em dia (${n(ATRASADOS)} atrasados). O limite volta a valer depois.</p>
+    <button data-act="retomar" class="font-medium text-warning hover:underline">Retomar</button>
+  </div>`;
+const emailOff = () => emailPend() ? `Confirme seu e-mail para ligar. <button data-act="reenviar" class="font-medium text-primary hover:underline">Reenviar link</button>` : '';
+const contaEmail = () => `ana@exemplo.com`;
+const googleNote = () => S.conta === 'google' ? 'Crie uma senha antes de desvincular.' : '';
+const avatar = (cls = 'h-12 w-12 text-base') => `<span class="grid ${cls} shrink-0 place-items-center rounded-full bg-accent font-display font-semibold text-accent-foreground">AS</span>`;
+
+/* ---------- Configurações: linhas agrupadas por seção; cada valor abre um sheet ---------- */
+function configuracoes() {
+  const c = S.draft;
+  const grupo = (t, rows) => `
+    <section>
+      <h2 class="mb-2 px-1 text-sm font-medium text-muted-foreground">${t}</h2>
+      <div class="divide-y overflow-hidden rounded-lg border bg-card shadow-card">${rows}</div>
+    </section>`;
+  // linha que abre um sheet
+  const linha = (icon, t, v, m, sub = '') => `
+    <button data-act="modal" data-m="${m}" class="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-accent/60">
+      <span class="text-muted-foreground">${ic(icon, 'h-[18px] w-[18px]')}</span>
+      <span class="min-w-0 flex-1"><span class="block text-sm font-medium">${t}</span>${sub ? `<span class="block text-xs text-muted-foreground">${sub}</span>` : ''}</span>
+      <span class="truncate text-sm text-muted-foreground">${v}</span>
+      <span class="text-muted-foreground">${ic('right', 'h-4 w-4')}</span>
+    </button>`;
+  const linhaSw = (icon, t, sub, k, on, dis) => `
+    <div class="flex items-center gap-3 px-4 py-3.5">
+      <span class="text-muted-foreground">${ic(icon, 'h-[18px] w-[18px]')}</span>
+      <span class="min-w-0 flex-1"><span class="block text-sm font-medium">${t}</span><span class="block text-xs text-muted-foreground">${sub}</span></span>
+      ${sw(k, on, dis, t)}
+    </div>`;
+
+  return `
+  <div class="mx-auto max-w-2xl space-y-7">
+    <h1 class="hidden font-display text-3xl font-semibold tracking-tight md:block">Configurações</h1>
+    ${grupo('Estudo',
+      linha('clock', 'Review Time', n(c.hora), 'hora', 'Hora do aviso da revisão de hoje') +
+      linha('globe', 'Fuso horário', fusoNome(), 'fuso') +
+      linha('sparkles', 'Novos por dia', S.pausados ? `<span class="text-warning">Pausados</span>` : n(c.novos), 'novos', 'Cards novos na revisão de cada dia'))}
+    ${S.pausados ? pausaNota('-mt-4') : ''}
+    ${grupo('Notificações',
+      linhaSw('mail', 'Aviso por e-mail', emailPend() ? emailOff() : `Às ${n(c.hora)}, para ${contaEmail()}`, 'emailOn', c.emailOn && !emailPend(), emailPend()) +
+      linhaSw('bell', 'Aviso no app', `Ponto no sino às ${n(c.hora)}. A faixa do Início aparece sempre.`, 'appOn', c.appOn))}
+    ${grupo('Aparência', linha('palette', 'Tema', TEMAS[c.tema], 'tema'))}
+    ${grupo('Conta', `
+      <button data-act="modal" data-m="nome" class="flex w-full items-center gap-3 px-4 py-4 text-left hover:bg-accent/60">
+        ${avatar()}
+        <span class="min-w-0 flex-1"><span class="block font-medium">${S.cfg.nome}</span><span class="block truncate text-sm text-muted-foreground">${contaEmail()}</span></span>
+        ${emailPend() ? badge('Não confirmado', 'bg-warning/15 text-warning') : ''}
+        <span class="text-muted-foreground">${ic('right', 'h-4 w-4')}</span>
+      </button>
+      ${emailPend() ? `<div class="flex items-center gap-3 bg-warning/5 px-4 py-3 text-sm"><span class="min-w-0 flex-1 text-muted-foreground">Enviamos um link para ${contaEmail()}.</span><button data-act="reenviar" class="font-medium text-primary hover:underline">Reenviar</button></div>` : ''}
+      ${linha('key', temSenha() ? 'Trocar senha' : 'Criar senha', '', 'senha', temSenha() ? '' : 'Para entrar também com e-mail e senha')}
+      <div class="flex items-center gap-3 px-4 py-3.5">
+        <span class="text-muted-foreground">${ic('google', 'h-[18px] w-[18px]')}</span>
+        <span class="min-w-0 flex-1"><span class="block text-sm font-medium">Google</span><span class="block text-xs text-muted-foreground">${temGoogle() ? `Vinculado · ${contaEmail()}${googleNote() ? ` · ${googleNote()}` : ''}` : 'Entre com um toque'}</span></span>
+        ${temGoogle()
+          ? `<button data-act="desvincular" class="${btn('outline', 'sm')}" ${S.conta === 'google' ? 'disabled' : ''}>Desvincular</button>`
+          : `<button data-act="vincular" class="${btn('outline', 'sm')}">Vincular</button>`}
+      </div>
+      <button data-act="sair" class="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-medium text-destructive hover:bg-destructive/5">${ic('logout', 'h-[18px] w-[18px]')}Sair</button>`)}
+    <div class="text-center"><button data-act="modal" data-m="apagar" class="text-sm text-muted-foreground hover:text-destructive hover:underline">Apagar conta</button></div>
+  </div>`;
+}
+
+/* ---------- diálogos (centrados no desktop, bottom sheet no mobile) ---------- */
+function modal() {
+  const m = S.modal;
+  if (!m) return '';
+  const c = S.draft;
+  const footer = (ok, kind = 'primary') => `
+    <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button data-act="close" class="${btn('ghost', 'md')}">Cancelar</button>
+      <button data-act="ok" class="${btn(kind, 'md')}">${ok}</button>
+    </div>`;
+  const body = {
+    hora: () => `
+      <h3 class="font-display text-lg font-semibold">Review Time</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Hora em que chega o aviso da revisão de hoje.</p>
+      <input id="m-hora" type="time" value="${m.v}" class="${INPUT} mt-4 h-14 text-center font-display text-2xl tnum">
+      <div class="mt-3 flex flex-wrap gap-2">${['07:00', '12:00', '19:00', '21:00'].map((h) => `<button data-act="m-hora" data-v="${h}" class="rounded-full border px-3 py-1 text-sm tnum ${h === m.v ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-accent'}">${h}</button>`).join('')}</div>
+      <p class="mt-3 text-xs text-muted-foreground">Fuso: ${fusoNome()}.</p>
+      ${footer('Salvar')}`,
+    fuso: () => `
+      <h3 class="font-display text-lg font-semibold">Fuso horário</h3>
+      <label class="mt-4 flex items-center justify-between gap-3 rounded-md bg-muted px-3 py-2.5 text-sm"><span><span class="block font-medium">Automático</span><span class="text-muted-foreground">Usar o fuso do aparelho</span></span>${sw('m-auto', m.auto, false, 'Automático')}</label>
+      <div class="mt-3 max-h-64 space-y-0.5 overflow-y-auto ${m.auto ? 'pointer-events-none opacity-50' : ''}">
+        ${FUSOS.map(([k, l, g]) => `<button data-act="m-fuso" data-v="${k}" class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm hover:bg-accent"><span class="flex-1">${l}</span><span class="text-muted-foreground tnum">${g}</span>${k === m.v ? ic('check', 'h-4 w-4 text-primary') : '<span class="w-4"></span>'}</button>`).join('')}
+      </div>
+      ${footer('Salvar')}`,
+    novos: () => `
+      <h3 class="font-display text-lg font-semibold">Novos por dia</h3>
+      <p class="mt-1 text-sm text-muted-foreground">${NOVOS_HINT}</p>
+      <div class="mt-5 flex justify-center">${stepper(m.v, 'lg')}</div>
+      <div class="mt-4 flex flex-wrap justify-center gap-2">${[10, 20, 30, 50].map((v) => `<button data-act="m-novos" data-v="${v}" class="rounded-full border px-3 py-1 text-sm tnum ${v === m.v ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-accent'}">${v}${v === 20 ? ' · padrão' : ''}</button>`).join('')}</div>
+      ${pausaNota('mt-5')}
+      ${footer('Salvar')}`,
+    tema: () => `
+      <h3 class="font-display text-lg font-semibold">Tema</h3>
+      <div class="mt-4 space-y-1">${['claro', 'escuro', 'sistema'].map((k) => `<button data-act="m-tema" data-v="${k}" class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm hover:bg-accent">${ic(k === 'claro' ? 'sun' : k === 'escuro' ? 'moon' : 'monitor', 'h-4 w-4 text-muted-foreground')}<span class="flex-1">${TEMAS[k]}${k === 'sistema' ? '<span class="block text-xs text-muted-foreground">Segue o claro ou escuro do aparelho</span>' : ''}</span>${c.tema === k ? ic('check', 'h-4 w-4 text-primary') : ''}</button>`).join('')}</div>`,
+    nome: () => `
+      <h3 class="font-display text-lg font-semibold">Seu nome</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Aparece na saudação do Início.</p>
+      <input id="m-nome" value="${S.cfg.nome}" class="${INPUT} mt-4">
+      <p class="mt-4 text-sm font-medium">E-mail</p>
+      <p class="text-sm text-muted-foreground">${contaEmail()} · não dá para trocar por aqui.</p>
+      ${footer('Salvar')}`,
+    senha: () => `
+      <h3 class="font-display text-lg font-semibold">${temSenha() ? 'Trocar senha' : 'Criar senha'}</h3>
+      ${temSenha() ? '' : '<p class="mt-1 text-sm text-muted-foreground">Depois você pode entrar com e-mail e senha, além do Google.</p>'}
+      <div class="mt-4 space-y-3">
+        ${temSenha() ? `<label class="block text-sm font-medium">Senha atual<input type="password" autocomplete="current-password" class="${INPUT} mt-1.5"></label>` : ''}
+        <label class="block text-sm font-medium">Senha nova<input id="m-senha" type="password" autocomplete="new-password" class="${INPUT} mt-1.5 ${m.err ? 'border-destructive' : ''}"></label>
+        <p class="text-xs ${m.err ? 'text-destructive' : 'text-muted-foreground'}">${m.err || 'Pelo menos 8 caracteres.'}</p>
+        ${temSenha() ? '<a href="auth.html?tela=esqueci" class="inline-block text-sm font-medium text-primary hover:underline">Esqueci a senha atual</a>' : ''}
+      </div>
+      ${footer(temSenha() ? 'Trocar senha' : 'Criar senha')}`,
+    apagar: () => `
+      <h3 class="font-display text-lg font-semibold">Apagar sua conta?</h3>
+      <p class="mt-2 text-sm text-muted-foreground">Seus Decks, Cards, Labels, Comments e o histórico de Ratings somem para sempre. Não dá para desfazer.</p>
+      <label class="mt-4 block text-sm font-medium">Digite seu e-mail para confirmar<input id="m-apagar" class="${INPUT} mt-1.5" placeholder="${contaEmail()}"></label>
+      ${footer('Apagar conta', 'destructive')}`,
+  }[m.kind]();
+  return `
+    <div class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
+      <div class="absolute inset-0 bg-black/40" data-act="close"></div>
+      <div data-keep class="relative w-full rounded-t-xl bg-popover p-5 pb-8 text-popover-foreground shadow-pop sm:max-w-md sm:rounded-lg sm:p-6">
+        <div class="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted sm:hidden"></div>
+        ${body}
+      </div>
+    </div>`;
+}
+
+/* ---------- toasts ---------- */
+function toasts() {
+  return `<div class="pointer-events-none fixed inset-x-3 bottom-24 z-[60] flex flex-col gap-2 md:inset-x-auto md:bottom-6 md:right-6 md:w-96" aria-live="polite">
+    ${S.toasts.map((t) => `
+      <div class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-pop">
+        <span class="text-success">${ic('ok', 'h-5 w-5')}</span>
+        <p class="flex-1 text-sm">${t.msg}</p>
+        ${t.action ? `<button data-act="toast-act:${t.id}" class="text-sm font-medium text-primary hover:underline">${t.action}</button>` : ''}
+        <button data-act="toast-close:${t.id}" class="text-muted-foreground hover:text-foreground" aria-label="Fechar">${ic('x', 'h-4 w-4')}</button>
+      </div>`).join('')}
+  </div>`;
+}
+function toast(msg, action = null, run = null) {
+  const id = ++toastId;
+  S.toasts.push({ id, msg, action, run });
+  setTimeout(() => { S.toasts = S.toasts.filter((t) => t.id !== id); render(); }, 5000);
+}
+
+/* ---------- gravação: cada mudança salva na hora, com "Desfazer" ---------- */
+const MSG = {
+  hora: (c) => `Aviso da revisão às ${c.hora}.`,
+  fuso: (c) => `Fuso: ${fusoNome(c)}.`,
+  novos: (c) => `Até ${c.novos} Cards novos por dia.`,
+  emailOn: (c) => c.emailOn ? 'Aviso por e-mail ligado.' : 'Aviso por e-mail desligado.',
+  appOn: (c) => c.appOn ? 'Aviso no app ligado.' : 'Aviso no app desligado.',
+  nome: (c) => 'Nome salvo.',
+};
+function edit(k, v) {
+  S.draft[k] = v;
+  const antes = { ...S.cfg };
+  S.cfg = { ...S.draft };
+  if (MSG[k]) toast(MSG[k](S.cfg), 'Desfazer', () => { S.cfg = antes; S.draft = { ...antes }; });
+}
+
+/* ---------- barra do protótipo (fora do design) ---------- */
+function switcher() {
+  const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
+  return `
+  <div data-keep class="fixed bottom-[5.5rem] left-3 right-3 z-[100] flex flex-wrap items-center justify-center gap-1 rounded-3xl bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:flex-nowrap md:rounded-full md:px-2 md:py-1.5" style="font-family:system-ui,sans-serif">
+    <select data-sel="conta" class="h-8 rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Tipo de conta">
+      ${Object.entries(CONTAS).map(([k, l]) => `<option value="${k}" ${k === S.conta ? 'selected' : ''}>${l}</option>`).join('')}
+    </select>
+    <button data-act="proto-email" class="${b} ${emailPend() ? 'bg-amber-500/30 text-amber-300' : ''}" title="${emailPend() ? 'E-mail não confirmado' : 'E-mail confirmado'}" aria-label="E-mail confirmado ou não">${ic('mail', 'h-4 w-4')}</button>
+    <button data-act="proto-pausa" class="${b} ${S.pausados ? 'bg-amber-500/30 text-amber-300' : ''}" title="${S.pausados ? 'Novos pausados' : 'Novos ativos'}" aria-label="Novos pausados ou não">${ic('pause', 'h-4 w-4')}</button>
+    <button data-act="proto-tema" class="${b}" aria-label="Trocar tema" title="Tema">${ic(temaEfetivo() === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
+    <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+function screen() {
+  return shell(configuracoes()) + cabecalho.novoSheet(ic, S.open === 'novo-sheet') + modal() + toasts();
+}
+
+function render() {
+  document.documentElement.classList.toggle('dark', temaEfetivo() === 'escuro');
+  const app = document.getElementById('app');
+  if (S.frame === 'mobile' && !S.embed) {
+    const p = new URLSearchParams({ conta: S.conta, tema: S.draft.tema, embed: '1' });
+    if (S.email) p.set('email', 'pendente');
+    if (S.pausados) p.set('novos', 'pausados');
+    const src = '?' + p;
+    const frame = app.querySelector('iframe');
+    if (!frame || frame.dataset.src !== src) app.innerHTML = `
+      <div class="grid min-h-screen place-items-center bg-muted p-6 pb-24">
+        <iframe data-src="${src}" src="${src}" title="Mobile 390px" class="h-[844px] max-h-[calc(100vh-7rem)] w-[390px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-background shadow-2xl"></iframe>
+      </div>`;
+  } else {
+    app.innerHTML = screen();
+  }
+  document.getElementById('switcher').innerHTML = S.embed ? '' : switcher();
+}
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) {
+    if (S.open && !e.target.closest('[data-keep]')) { S.open = null; render(); }
+    return;
+  }
+  const [k, arg] = el.dataset.act.split(':');
+  const m = S.modal;
+  switch (k) {
+    case 'toggle': S.open = S.open === arg ? null : arg; if (arg === 'bell') S.bellSeen = true; break;
+    case 'close': S.open = null; S.modal = null; break;
+    case 'nav':
+      if (arg === 'config') break;
+      location.href = { inicio: 'home.html', decks: 'decks.html', progresso: 'progresso.html' }[arg] + `?tema=${temaEfetivo()}${S.embed ? '&embed=1' : ''}`;
+      return;
+    case 'modal':
+      S.modal = { kind: el.dataset.m, v: { hora: S.draft.hora, fuso: S.draft.fuso, novos: S.draft.novos }[el.dataset.m], auto: S.draft.fusoAuto };
+      break;
+    case 'flip':
+      if (el.dataset.k === 'm-auto') { m.auto = !m.auto; break; }
+      edit(el.dataset.k, !S.draft[el.dataset.k]);
+      break;
+    case 'step': {
+      const d = +el.dataset.v;
+      m.v = Math.max(0, Math.min(200, m.v + d));
+      break;
+    }
+    case 'm-hora': m.v = el.dataset.v; break;
+    case 'm-novos': m.v = +el.dataset.v; break;
+    case 'm-fuso': m.v = el.dataset.v; break;
+    case 'm-tema': S.modal = null; edit('tema', el.dataset.v); syncURL(); break;
+    case 'ok': {
+      if (m.kind === 'hora') { S.modal = null; edit('hora', document.getElementById('m-hora').value || m.v); }
+      else if (m.kind === 'fuso') { S.modal = null; S.draft.fusoAuto = m.auto; edit('fuso', m.v); }
+      else if (m.kind === 'novos') { S.modal = null; edit('novos', m.v); }
+      else if (m.kind === 'nome') { const v = document.getElementById('m-nome').value.trim(); S.modal = null; if (v) { S.draft.nome = v; S.cfg.nome = v; toast('Nome salvo.'); } }
+      else if (m.kind === 'senha') {
+        const v = document.getElementById('m-senha').value;
+        if (v.length < 8) { m.err = 'Use pelo menos 8 caracteres.'; break; }
+        S.modal = null;
+        if (S.conta === 'google') { S.conta = 'ambos'; syncURL(); toast('Senha criada. Agora você entra também com e-mail.'); }
+        else toast('Senha alterada.');
+      }
+      else if (m.kind === 'apagar') { S.modal = null; location.href = 'auth.html'; return; }
+      break;
+    }
+    case 'retomar': S.pausados = false; syncURL(); toast('Cards novos retomados. Até ' + S.cfg.novos + ' por dia.'); break;
+    case 'reenviar': toast('Enviamos um novo link para ana@exemplo.com.'); break;
+    case 'vincular': S.conta = 'ambos'; syncURL(); toast('Conta Google vinculada.'); break;
+    case 'desvincular': S.conta = 'senha'; syncURL(); toast('Conta Google desvinculada.', 'Desfazer', () => { S.conta = 'ambos'; syncURL(); }); break;
+    case 'sair': location.href = 'auth.html'; return;
+    case 'toast-act': {
+      const t = S.toasts.find((x) => x.id == arg);
+      S.toasts = S.toasts.filter((x) => x.id != arg);
+      if (t && t.run) t.run();
+      break;
+    }
+    case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
+    case 'proto-email': S.email = !S.email; syncURL(); break;
+    case 'proto-pausa': S.pausados = !S.pausados; syncURL(); break;
+    case 'proto-tema': {
+      const t = temaEfetivo() === 'escuro' ? 'claro' : 'escuro';
+      S.draft.tema = t; S.cfg.tema = t; syncURL();
+      break;
+    }
+    case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
+  }
+  render();
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.sel === 'conta') { S.conta = e.target.value; syncURL(); render(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && (S.open || S.modal)) { S.open = null; S.modal = null; render(); return; }
+});
+
+syncURL();
+render();
+</script>
+</body>
+</html>

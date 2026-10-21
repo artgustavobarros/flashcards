@@ -1,0 +1,187 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Montagem final do protótipo navegável".
+  Mapa do protótipo: porta de entrada ("Abrir o app" leva ao Login) e links diretos para cada tela e estado.
+  Cada página tem a barra "Protótipo" recolhida no canto, com "Mapa" para voltar aqui.
+  Parâmetros: ?tema=claro|escuro. Dados falsos, nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa do protótipo · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// o mapa começa cada visita com a conta confirmada: cada link mostra só o estado que ele nomeia
+try { sessionStorage.removeItem('daruma:email'); } catch {}
+const P = new URLSearchParams(location.search);
+const S = { tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro') };
+
+// [título, descrição, página, [[estado, parâmetros], ...]]
+const TELAS = [
+  ['Login e cadastro', 'E-mail primeiro, Google, cadastro com nome, senha esquecida.', 'auth.html', [
+    ['Entrar', ''], ['Senha errada', 'tela=login-erro'], ['Conta do Google', 'tela=conta-google'], ['Google falhou', 'tela=google-erro'],
+    ['Sessão expirada', 'tela=sessao-expirada'], ['Criar conta', 'tela=cadastro'], ['Criar conta · erros', 'tela=cadastro-erro'],
+    ['Esqueci a senha', 'tela=esqueci'], ['Link enviado', 'tela=enviado'], ['Nova senha', 'tela=nova-senha'], ['Link expirado', 'tela=link-expirado'],
+  ]],
+  ['Início', 'Saudação, faixa da revisão de hoje, Decks recentes e o sino.', 'home.html', [
+    ['Revisão pendente', ''], ['Em andamento', 'dia=andamento'], ['Muitos atrasados', 'dia=backlog'], ['Concluída', 'dia=concluida'],
+    ['Marcada como vista', 'dia=vista'], ['Nada para hoje', 'dia=livre'], ['Conta nova', 'dados=vazio&email=pendente'], ['Depois do 1º estudo', 'dados=primeiro'],
+  ]],
+  ['Decks, Cards e Labels', 'Cada nível é uma página: Decks → Deck → Card, com Comments no fim do Card.', 'decks.html', [
+    ['Lista de Decks', ''], ['Aba Cards', 'tela=cards'], ['Busca “braquial”', 'tela=cards&q=braquial'], ['Detalhe do Deck', 'tela=deck&deck=anatomia'],
+    ['Card com Comments', 'tela=deck&deck=anatomia&card=biceps'], ['Card reiniciado', 'tela=deck&deck=ingles&card=lookafter'], ['Labels', 'tela=cards&labels=1'],
+    ['Deck vazio', 'tela=deck&deck=quimica'], ['Sem Decks', 'dados=vazio'],
+  ]],
+  ['Editor de Card', '“Card em foco”: pergunta, vira, resposta, “Salvar e próximo”.', 'editor-de-card.html', [
+    ['Lote · começo', ''], ['Lote · 3 Cards salvos', 'tela=lote-andamento'], ['Novo Deck', 'tela=novo-deck'], ['Editar um Card', 'tela=editar'], ['Editar um Card Novo', 'tela=editar-novo'],
+  ]],
+  ['Study Session', 'Modo foco: a resposta aparece abaixo da pergunta, 4 botões de Rating.', 'study-session.html', [
+    ['Revisão de hoje', ''], ['“Estudar” do Deck', 'origem=deck'], ['“Estudar agora” (lote)', 'origem=lote'], ['Resposta à mostra', 'tela=resposta'],
+    ['Card de novo', 'tela=de-novo'], ['Comments abertos', 'tela=comments'], ['Sair no meio', 'tela=sair'], ['Resumo final', 'tela=resumo'],
+  ]],
+  ['Progresso', 'Sequência, previsão de 7 dias, acertos, Cards por estado e Por Deck.', 'progresso.html', [
+    ['Todos os Decks', ''], ['Só Anatomia humana', 'deck=anatomia'], ['Últimos 7 dias', 'periodo=7'], ['Sem Ratings ainda', 'dados=vazio'],
+  ]],
+  ['Configurações', 'Estudo, Notificações, Aparência e Conta. Cada valor abre um sheet.', 'configuracoes.html', [
+    ['Conta com senha', ''], ['Conta Google', 'conta=google'], ['Senha + Google', 'conta=ambos'], ['E-mail não confirmado', 'email=pendente'], ['Novos pausados', 'novos=pausados'],
+  ]],
+  ['E-mails', 'Daily Review, confirmação de conta e redefinição de senha.', 'emails.html', [
+    ['Daily Review', ''], ['Muitos atrasados', 'email=atrasados'], ['Pergunta com imagem', 'email=imagem'], ['Confirmação de conta', 'email=confirmacao'], ['Redefinição de senha', 'email=senha'],
+  ]],
+  ['Fundação visual', 'Tokens, componentes base e as telas de erro.', 'fundacao-visual.html', [
+    ['Catálogo', ''], ['404 logado', 'tela=404'], ['404 deslogado', 'tela=404-deslogado'], ['Erro genérico', 'tela=erro'],
+  ]],
+];
+
+const href = (pagina, q) => pagina + (q ? '?' + q : '');
+const ic = (d, cls = 'h-4 w-4') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const SETA = '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>';
+const SOL = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>';
+const LUA = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>';
+
+function render() {
+  document.documentElement.classList.toggle('dark', S.tema === 'escuro');
+  document.getElementById('app').innerHTML = `
+  <div class="min-h-screen">
+    <header class="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:h-20 md:px-6">
+      <span class="inline-flex items-center gap-2 font-display text-2xl font-semibold tracking-tight text-primary">${daruma()}Daruma</span>
+      <button data-act="tema" class="ml-auto grid h-10 w-10 place-items-center rounded-full border bg-card hover:bg-accent" aria-label="Trocar tema">${ic(S.tema === 'escuro' ? LUA : SOL, 'h-[18px] w-[18px]')}</button>
+    </header>
+    <main class="mx-auto max-w-5xl px-5 pb-16 pt-4 md:px-6 md:pt-8">
+      <p class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Protótipo navegável</p>
+      <h1 class="mt-1 font-display text-3xl font-semibold tracking-tight md:text-4xl">Todas as telas do app</h1>
+      <p class="mt-2 max-w-2xl text-muted-foreground">Repetição espaçada para estudar com flashcards. Fidelidade média e dados falsos: nada é salvo. Em cada tela, o botão “Protótipo” no canto abre a barra com os estados e o link de volta a este mapa.</p>
+      <div class="mt-6 flex flex-wrap gap-2">
+        <a href="auth.html" class="inline-flex h-11 items-center gap-2 rounded-btn bg-primary px-6 font-medium text-primary-foreground hover:bg-primary/90">Abrir o app${ic(SETA)}</a>
+        <a href="home.html" class="inline-flex h-11 items-center gap-2 rounded-btn border bg-card px-6 font-medium hover:bg-accent">Entrar já logado</a>
+      </div>
+      <p class="mt-3 text-sm text-muted-foreground">No celular: DevTools em modo dispositivo, ou o botão de largura na barra “Protótipo” (390px).</p>
+      <div class="mt-10 grid gap-4 md:grid-cols-2">
+        ${TELAS.map(([t, d, pagina, estados]) => `
+          <section class="rounded-lg border bg-card p-5 shadow-card">
+            <a href="${pagina}" class="group flex items-baseline justify-between gap-3">
+              <h2 class="font-display text-lg font-semibold group-hover:text-primary">${t}</h2>
+              <span class="shrink-0 text-xs text-muted-foreground">${pagina}</span>
+            </a>
+            <p class="mt-1 text-sm text-muted-foreground">${d}</p>
+            <div class="mt-4 flex flex-wrap gap-1.5">
+              ${estados.map(([e, q]) => `<a href="${href(pagina, q)}" class="inline-flex h-8 items-center rounded-full border px-3 text-sm hover:border-foreground/40 hover:bg-accent">${e}</a>`).join('')}
+            </div>
+          </section>`).join('')}
+      </div>
+    </main>
+  </div>`;
+}
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act="tema"]');
+  if (!el) return;
+  S.tema = S.tema === 'escuro' ? 'claro' : 'escuro';
+  history.replaceState(null, '', '?tema=' + S.tema);
+  render();
+});
+render();
+</script>
+</body>
+</html>

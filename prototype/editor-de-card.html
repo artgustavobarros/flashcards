@@ -1,0 +1,614 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Editor de Card e fluxo "Estudar agora"".
+  Pergunta: como é criar vários Cards seguidos num Deck (rich text, Labels, Cards já criados no lote)
+  terminando em "Estudar agora", e como é o modo "editar um Card"?
+  Decisão: "Card em foco". O editor tem a forma do Card: escreve-se a pergunta, vira, escreve-se a resposta,
+  "Salvar e próximo". O lote aparece numa faixa de pílulas numeradas; as Labels passam para o próximo Card.
+  As variantes descartadas (formulário + lista do lote, lista contínua) estão no branch prototype/editor-de-card.
+  Parâmetros: ?tela=lote|lote-andamento|novo-deck|editar|editar-novo · ?tema=claro|escuro · ?frame=mobile.
+  Ticket "Edição e reinício nos protótipos": no modo "editar um Card", Card com Rating mostra "O agendamento
+  deste Card não muda." (editar-novo mostra um Card Novo, sem a linha). Com ?de=card|sessao o editor recebe o
+  Card pelo sessionStorage (daruma:editar) e, ao salvar ou fechar, volta ao detalhe do Card ou à Study Session.
+  Ctrl/Cmd + Enter vira o Card ou salva.
+  Tokens e componentes vêm de prototype/fundacao-visual.html. Nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Editor de Card · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  /* Tokens escolhidos (variante B4 · Zinc + verde): neutros do Zinc, verde como cor de ação e de sucesso */
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  kbd { font-family: inherit; font-size: .75em; border: 1px solid hsl(var(--border)); border-radius: 4px; padding: 0 .3em; }
+  /* conteúdo rich text (editor e exibição) */
+  .rt { outline: none; overflow-wrap: anywhere; }
+  .rt:empty::before { content: attr(data-ph); color: hsl(var(--muted-foreground)); pointer-events: none; }
+  .rt b, .rt strong { font-weight: 650; }
+  .rt ul { list-style: disc; padding-left: 1.25rem; }
+  .rt ol { list-style: decimal; padding-left: 1.25rem; }
+  .rt code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: hsl(var(--muted)); padding: .1em .35em; border-radius: 6px; }
+  .rt pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; background: hsl(var(--muted)); padding: .75rem .9rem; border-radius: 10px; white-space: pre-wrap; margin: .5rem 0; }
+  .rt img { max-width: min(100%, 320px); border-radius: 10px; margin: .5rem 0; }
+  .rt .formula { display: inline-block; padding: 0 .45em; border-radius: 6px; background: hsl(var(--primary) / .1); font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher"></div>
+
+<script>
+/* ---------- estado ---------- */
+const P = new URLSearchParams(location.search);
+const TELAS = { lote: 'Lote · começo', 'lote-andamento': 'Lote · 3 Cards salvos', 'novo-deck': 'Novo Deck', editar: 'Editar um Card', 'editar-novo': 'Editar um Card Novo' };
+const EXEMPLOS = [
+  // os 3 Cards novos de Anatomia humana em decks.html
+  { id: 1, q: 'Qual músculo é o principal extensor do cotovelo?', a: 'O <b>tríceps braquial</b>.', labels: ['músculos'] },
+  { id: 2, q: 'Quantas vértebras tem a coluna cervical?', a: '<b>7</b> vértebras (C1 a C7).', labels: ['ossos'] },
+  { id: 3, q: 'Quais são as partes de um neurônio?', a: '<ul><li>Dendritos</li><li>Corpo celular</li><li>Axônio</li></ul>', labels: ['revisar'] },
+];
+// aberto direto pelo mapa ("Editar um Card"): edita um Card de decks.html e volta para ele
+const SEM_ORIGEM = {
+  editar: { id: 'biceps', q: 'Qual músculo é o principal flexor do cotovelo?', a: 'O <b>bíceps braquial</b>, com ajuda do braquial e do braquiorradial.', labels: ['músculos', 'prova final'], deck: 'Anatomia humana', rated: true, volta: 'decks.html?tela=deck&deck=anatomia&card=biceps' },
+  'editar-novo': { id: 'triceps', q: EXEMPLOS[0].q, a: EXEMPLOS[0].a, labels: ['músculos'], deck: 'Anatomia humana', rated: false, volta: 'decks.html?tela=deck&deck=anatomia&card=triceps' },
+};
+const DECK_ID = { 'Anatomia humana': 'anatomia', 'Inglês: phrasal verbs': 'ingles', 'JavaScript': 'js', 'História do Brasil': 'historia', 'Química orgânica': 'quimica' };
+const S = {
+  tela: TELAS[P.get('tela')] ? P.get('tela') : 'lote',
+  tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
+  frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
+  embed: P.get('embed') === '1',
+  de: ['card', 'sessao'].includes(P.get('de')) ? P.get('de') : null,
+  allLabels: ['músculos', 'ossos', 'coração', 'prova final', 'revisar'],
+  toasts: [],
+};
+let uid = 10, toastId = 0;
+const blank = (labels = []) => ({ q: '', a: '', labels: [...labels] });
+const clone = (c) => ({ ...c, labels: [...c.labels] });
+
+/* Cada item do seletor "tela" é um estado inicial pronto; depois a navegação é livre. */
+function preset(tela) {
+  Object.assign(S, {
+    tela, view: 'editor', modo: 'lote', deck: 'Anatomia humana', novoDeck: false, lote: [], draft: blank(),
+    editingId: null, stash: null, side: 'q', open: null, lq: '', err: {}, flash: null,
+    leaveTo: null, focus: S.embed ? null : 'rt:q', src: null, rated: false,
+  });
+  if (tela === 'lote-andamento') { S.lote = EXEMPLOS.map(clone); S.draft = blank(['músculos']); }
+  if (tela === 'novo-deck') { S.novoDeck = true; S.deck = ''; S.focus = S.embed ? null : 'deck'; }
+  if (tela === 'editar' || tela === 'editar-novo') {
+    // vindo do detalhe do Card ou da Study Session, edita o Card de lá
+    const src = (S.de && store.get('daruma:editar')) || SEM_ORIGEM[tela];
+    const c = { id: src.id, q: src.q, a: src.a, labels: [...(src.labels || [])] };
+    { S.deck = src.deck; c.labels.forEach((l) => { if (!S.allLabels.includes(l)) S.allLabels.push(l); }); }
+    Object.assign(S, { modo: 'editar', src, rated: src ? src.rated : tela === 'editar', lote: [c], editingId: c.id, draft: { q: c.q, a: c.a, labels: [...c.labels] } });
+  }
+}
+
+/* ---------- ponte com o detalhe do Card e a Study Session (só nesta aba) ---------- */
+const store = {
+  get(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const goBack = (salvo) => ir(S.src.volta + (salvo ? '&salvo=1' : ''));
+
+function syncURL() {
+  const p = new URLSearchParams({ tela: S.tela, tema: S.tema });
+  if (S.frame === 'mobile') p.set('frame', 'mobile');
+  if (S.embed) p.set('embed', '1');
+  history.replaceState(null, '', '?' + p);
+}
+
+/* ---------- ícones (traços estilo lucide) ---------- */
+const PATHS = {
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  ok: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  tag: '<path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+  pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
+  bold: '<path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/>',
+  italic: '<line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/>',
+  list: '<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>',
+  listOrdered: '<line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
+  code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+  codeBlock: '<path d="m10 9-3 3 3 3"/><path d="m14 15 3-3-3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/>',
+  image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  sigma: '<path d="M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+};
+const ic = (n, cls = 'h-5 w-5') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${PATHS[n]}</svg>`;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const IMG = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" fill="#d4d4d8"/><path d="M100 140l45-55 30 35 18-20 32 40z" fill="#a1a1aa"/><circle cx="205" cy="62" r="13" fill="#a1a1aa"/></svg>');
+
+/* ---------- componentes base (iguais à fundação) ---------- */
+const BTN_BASE = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-50';
+const BTN_SIZE = { sm: 'h-8 px-3 text-xs', md: 'h-10 px-4 text-sm', lg: 'h-12 px-6 text-base', icon: 'h-10 w-10' };
+const BTN_KIND = {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+  link: 'text-primary underline-offset-4 hover:underline',
+};
+const btn = (kind = 'primary', size = 'md', extra = '') => `${BTN_BASE} ${BTN_SIZE[size]} ${BTN_KIND[kind]} ${extra}`;
+const INPUT = 'flex h-10 w-full rounded-md border border-input bg-background px-3 text-base md:text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background';
+
+const chip = (t, scope, removable = true, dashed = false) => `
+  <span class="inline-flex items-center gap-1 rounded-full border ${dashed ? 'border-dashed text-muted-foreground' : ''} py-0.5 pl-2.5 ${removable ? 'pr-1' : 'pr-2.5'} text-xs font-medium">
+    ${ic('tag', 'h-3 w-3 text-muted-foreground')}${esc(t)}
+    ${removable ? `<button data-act="unlabel:${scope}|${esc(t)}" class="grid h-4 w-4 place-items-center rounded-full hover:bg-accent" aria-label="Remover ${esc(t)}">${ic('x', 'h-3 w-3')}</button>` : ''}
+  </span>`;
+const errMsg = (k) => S.err[k] ? `<p class="flex items-center gap-1.5 text-sm text-destructive">${ic('alert', 'h-4 w-4')}${S.err[k]}</p>` : '';
+
+/* ---------- conteúdo rich text ---------- */
+const plain = (h) => { const d = document.createElement('div'); d.innerHTML = String(h || '').replace(/<\/(li|p|div|pre)>|<br>/g, ' '); return d.textContent.replace(/\s+/g, ' ').trim(); };
+const filled = (h) => plain(h).length > 0 || /<img|class="formula"/.test(h || '');
+const complete = (d) => filled(d.q) && filled(d.a);
+const cardById = (id) => S.lote.find((c) => String(c.id) === String(id));
+
+const rtField = (key, ph, cls) =>
+  `<div contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(ph)}" data-rt="${key}" data-fk="rt:${key}" data-ph="${esc(ph)}" class="rt ${cls}">${rtValue(key)}</div>`;
+
+const rtValue = (key) => S.draft[key];
+function setRt(key, html) {
+  S.draft[key] = html;
+  if (S.err[key]) { delete S.err[key]; render(); }
+}
+
+const TOOLS = [
+  ['bold', 'Negrito (Ctrl+B)'], ['italic', 'Itálico (Ctrl+I)'], '|',
+  ['list', 'Lista'], ['listOrdered', 'Lista numerada'], '|',
+  ['code', 'Código na linha'], ['codeBlock', 'Bloco de código'], '|',
+  ['image', 'Imagem (também dá para colar ou arrastar)'], ['sigma', 'Fórmula'],
+];
+const toolbar = (key) => TOOLS.map((t) => t === '|'
+  ? '<span class="mx-1 h-5 w-px shrink-0 bg-border"></span>'
+  : `<button type="button" tabindex="-1" data-cmd="${t[0]}" data-for="${key}" title="${t[1]}" aria-label="${t[1]}" class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">${ic(t[0], 'h-4 w-4')}</button>`).join('');
+
+function runCmd(cmd, key) {
+  const el = document.querySelector(`[data-rt="${key}"]`);
+  if (!el) return;
+  if (document.activeElement !== el) focusEnd(el);
+  const txt = getSelection().toString();
+  const html = (h) => document.execCommand('insertHTML', false, h);
+  switch (cmd) {
+    case 'bold': case 'italic': document.execCommand(cmd); break;
+    case 'list': document.execCommand('insertUnorderedList'); break;
+    case 'listOrdered': document.execCommand('insertOrderedList'); break;
+    case 'code': html(`<code>${esc(txt || 'código')}</code>&#8203;`); break;
+    case 'codeBlock': html(`<pre>${esc(txt || 'const total = 206;')}</pre><div><br></div>`); break;
+    case 'image': html(`<img src="${IMG}" alt="Imagem de exemplo">`); break;
+    case 'sigma': html('<span class="formula" contenteditable="false">x = (−b ± √Δ) ÷ 2a</span>&#8203;'); break;
+  }
+  setRt(key, el.innerHTML);
+}
+
+/* ---------- Labels ---------- */
+const getLabels = () => S.draft.labels;
+function toggleLabel(scope, name) {
+  const list = getLabels(scope);
+  const i = list.indexOf(name);
+  i < 0 ? list.push(name) : list.splice(i, 1);
+}
+function labelPanel(scope) {
+  const sel = getLabels(scope);
+  const q = S.lq.trim().toLowerCase();
+  const list = S.allLabels.filter((l) => l.includes(q));
+  const exact = S.allLabels.includes(q);
+  return `
+    <div class="border-b p-2"><input data-lq data-fk="lq" class="${INPUT} h-9" placeholder="Buscar ou criar Label" value="${esc(S.lq)}" aria-label="Buscar ou criar Label"></div>
+    <div class="max-h-60 overflow-y-auto p-1">
+      ${list.map((l) => {
+        const on = sel.includes(l);
+        return `<button data-act="label:${scope}|${esc(l)}" class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm hover:bg-accent">
+          <span class="grid h-4 w-4 place-items-center rounded border ${on ? 'border-primary bg-primary text-primary-foreground' : 'border-input'}">${on ? ic('check', 'h-3 w-3') : ''}</span>${esc(l)}</button>`;
+      }).join('')}
+      ${q && !exact ? `<button data-act="newlabel:${scope}|${esc(q)}" class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium text-primary hover:bg-accent">${ic('plus', 'h-4 w-4')}Criar “${esc(q)}”</button>` : ''}
+    </div>`;
+}
+/* ---------- cabeçalho do editor (página inteira, sem tab bar) ---------- */
+function editorHeader(right) {
+  const title = S.modo === 'editar' ? 'Editar Card' : S.novoDeck ? 'Novo Deck' : 'Adicionar Cards';
+  const sub = S.modo === 'editar' ? S.deck : S.novoDeck ? 'Dê um nome e crie os primeiros Cards' : `em ${S.deck}`;
+  return `
+  <header class="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
+    <div class="mx-auto flex h-14 max-w-5xl items-center gap-2 px-2 md:h-16 md:px-4">
+      <button data-act="sair" class="${btn('ghost', 'icon')}" aria-label="${S.src && S.de === 'sessao' ? 'Voltar à Study Session' : 'Fechar o editor'}">${ic('x')}</button>
+      <div class="min-w-0 flex-1">
+        <p class="truncate font-display text-lg font-semibold leading-tight">${title}</p>
+        <p class="truncate text-xs text-muted-foreground">${esc(sub)}</p>
+      </div>
+      <div class="flex items-center gap-2">${right}</div>
+    </div>
+  </header>`;
+}
+const bottomBar = (inner) => `
+  <div class="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">${inner}</div>`;
+
+/* ---------- editor: Card em foco ---------- */
+function editor() {
+  const n = S.lote.length, ed = S.modo === 'editar', side = S.side;
+  const editing = S.editingId && !ed;
+  const right = ed
+    ? `<button data-act="save" class="${btn('primary', 'sm', 'md:h-10 md:px-4 md:text-sm')}">Salvar</button>`
+    : `<button data-act="estudar" class="${btn(n ? 'primary' : 'outline', 'sm', 'md:h-10 md:px-4 md:text-sm')}">${ic('play', 'h-4 w-4')}Estudar agora${n ? ` · <span class="font-mono tnum">${n}</span>` : ''}</button>`;
+  const deckField = S.novoDeck ? `
+    <div class="mb-5 space-y-1">
+      <input data-deck data-fk="deck" aria-label="Nome do Deck" placeholder="Nome do novo Deck" value="${esc(S.deck)}"
+        class="w-full border-b bg-transparent pb-2 font-display text-2xl font-semibold outline-none placeholder:text-muted-foreground/60 focus:border-primary ${S.err.deck ? 'border-destructive' : ''}">
+      ${errMsg('deck')}
+    </div>` : '';
+  const strip = ed ? '' : `
+    <div class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1">
+      ${S.lote.map((c, i) => `<button data-act="editar:${c.id}" title="${esc(plain(c.q))}" class="h-9 min-w-[2.25rem] shrink-0 rounded-full border px-3 font-mono text-sm tnum transition ${c.id === S.editingId ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:bg-accent'} ${c.id === S.flash ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}">${i + 1}</button>`).join('')}
+      <button data-act="${editing ? 'cancelar-edicao' : 'noop'}" class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm ${editing ? 'border-dashed text-muted-foreground hover:bg-accent' : 'border-primary bg-primary text-primary-foreground'}">${ic('plus', 'h-4 w-4')}Card ${n + 1}</button>
+    </div>`;
+  const tab = (s, l) => `<button data-act="side:${s}" class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 ${side === s ? 'bg-card font-medium shadow-card' : 'text-muted-foreground'}">${l}<span class="h-1.5 w-1.5 rounded-full ${S.err[s] ? 'bg-destructive' : filled(S.draft[s]) ? 'bg-primary' : 'bg-input'}"></span></button>`;
+  const card = `
+    <div class="mt-3 overflow-hidden rounded-xl border bg-card text-card-foreground shadow-card ${S.err[side] ? 'border-destructive' : ''}">
+      <div class="flex justify-center border-b p-2"><div class="inline-flex rounded-full bg-muted p-1 text-sm">${tab('q', 'Pergunta')}${tab('a', 'Resposta')}</div></div>
+      ${side === 'a' && filled(S.draft.q) ? `<div class="border-b bg-muted/40 px-5 py-3 text-sm text-muted-foreground md:px-8"><span class="font-medium text-foreground">Pergunta:</span> ${esc(plain(S.draft.q))}</div>` : ''}
+      ${rtField(side, side === 'q' ? 'Escreva a pergunta…' : 'Escreva a resposta…', 'min-h-[220px] px-5 py-6 text-lg md:min-h-[280px] md:px-8 md:text-xl')}
+      ${S.err[side] ? `<div class="px-5 pb-3 md:px-8">${errMsg(side)}</div>` : ''}
+      <div class="flex items-center gap-0.5 overflow-x-auto border-t bg-muted/40 px-2 py-1.5">${toolbar(side)}</div>
+    </div>`;
+  const labels = `
+    <div class="mt-3 flex flex-wrap items-center gap-1.5">
+      ${S.draft.labels.map((l) => chip(l, 'draft')).join('')}
+      <button data-act="toggle:labels-draft" class="${btn('ghost', 'sm')}">${ic('tag', 'h-3.5 w-3.5')}${S.draft.labels.length ? 'Labels' : 'Adicionar Label'}</button>
+      ${!ed && !editing && S.draft.labels.length ? '<span class="text-xs text-muted-foreground">continuam no próximo Card</span>' : ''}
+    </div>
+    ${ed && S.rated ? '<p class="mt-2 px-1 text-xs text-muted-foreground">O agendamento deste Card não muda.</p>' : ''}`;
+  const action = side === 'q'
+    ? `<button data-act="side:a" class="${btn('primary', 'lg', 'w-full')}">Escrever a resposta${ic('right', 'h-5 w-5')}</button>`
+    : `<div class="grid grid-cols-[auto_1fr] gap-2"><button data-act="side:q" class="${btn('outline', 'lg', 'px-4')}" aria-label="Voltar à pergunta">${ic('left', 'h-5 w-5')}</button><button data-act="save" class="${btn('primary', 'lg', 'w-full')}">${ed || editing ? 'Salvar alterações' : 'Salvar e próximo'}</button></div>`;
+  return editorHeader(right) + `
+    <main class="mx-auto max-w-2xl px-4 pb-40 pt-4 md:pb-16 md:pt-8">
+      ${deckField}${strip}${card}${labels}
+      <div class="mt-6 hidden md:block">${action}<p class="mt-2 text-center text-xs text-muted-foreground"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> ${side === 'q' ? 'vira o Card' : 'salva'}</p></div>
+    </main>` + bottomBar(action);
+}
+
+/* ---------- sobreposições ---------- */
+function overlays() {
+  let out = '';
+  if (S.open === 'discard') {
+    const n = S.lote.length;
+    const [title, body, ok] = S.leaveTo === 'estudar'
+      ? ['Estudar sem o Card incompleto?', 'Ele ainda não tem pergunta e resposta, então não entra na sessão. O texto dele será descartado.', 'Descartar e estudar']
+      : S.modo === 'editar' ? ['Descartar as alterações?', 'O Card volta a ficar como estava.', 'Descartar']
+      : ['Sair sem salvar este Card?', `O texto do Card em edição será descartado.${n ? ` Os ${n} Cards já salvos continuam em ${esc(S.deck || 'novo Deck')}.` : ''}`, 'Descartar e sair'];
+    out += `
+    <div class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-black/50" data-act="close"></div>
+      <div data-keep role="dialog" aria-modal="true" class="relative w-full max-w-md rounded-xl border bg-popover p-6 text-popover-foreground shadow-pop">
+        <h2 class="font-display text-lg font-semibold">${title}</h2>
+        <p class="mt-2 text-sm text-muted-foreground">${body}</p>
+        <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button data-act="close" class="${btn('outline')}">Continuar editando</button>
+          <button data-act="descartar" class="${btn('destructive')}">${ok}</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  if (S.open === 'labels-draft') out += `
+    <div class="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4">
+      <div class="absolute inset-0 bg-black/40" data-act="close"></div>
+      <div data-keep class="relative w-full rounded-t-xl bg-popover pb-6 text-popover-foreground shadow-pop md:max-w-sm md:rounded-xl md:pb-0">
+        <div class="flex items-center justify-between px-4 pt-4"><p class="font-display text-lg font-semibold">Labels</p><button data-act="close" class="${btn('ghost', 'sm')}">Pronto</button></div>
+        ${labelPanel('draft')}
+      </div>
+    </div>`;
+  return out;
+}
+
+function toasts() {
+  const tone = { erro: ['border-destructive/40', 'text-destructive', 'alert'], ok: ['', 'text-success', 'ok'], info: ['', 'text-muted-foreground', 'info'] };
+  return `<div class="pointer-events-none fixed inset-x-3 bottom-24 z-[60] flex flex-col gap-2 md:inset-x-auto md:bottom-6 md:right-6 md:w-96" aria-live="polite">
+    ${S.toasts.map((t) => `
+      <div class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-pop ${tone[t.kind][0]}">
+        <span class="${tone[t.kind][1]}">${ic(tone[t.kind][2], 'h-5 w-5')}</span>
+        <p class="flex-1 text-sm">${t.msg}</p>
+        <button data-act="toast-close:${t.id}" class="text-muted-foreground hover:text-foreground" aria-label="Fechar">${ic('x', 'h-4 w-4')}</button>
+      </div>`).join('')}
+  </div>`;
+}
+function toast(kind, msg) {
+  const id = ++toastId;
+  S.toasts.push({ id, kind, msg });
+  setTimeout(() => { S.toasts = S.toasts.filter((t) => t.id !== id); render(); }, 5000);
+}
+
+/* ---------- regras do lote ---------- */
+function flash(id) {
+  S.flash = id;
+  setTimeout(() => { if (S.flash === id) { S.flash = null; render(); } }, 1400);
+}
+function deckOk() {
+  if (S.novoDeck && !S.deck.trim()) { S.err.deck = 'Dê um nome ao Deck.'; S.focus = 'deck'; return false; }
+  return true;
+}
+
+/* O rascunho é salvo por botão; tocar numa pílula do lote carrega aquele Card no editor. */
+function saveDraft() {
+  S.err = {};
+  if (!filled(S.draft.q)) S.err.q = 'Escreva a pergunta.';
+  if (!filled(S.draft.a)) S.err.a = 'Escreva a resposta.';
+  deckOk();
+  if (Object.keys(S.err).length) {
+    if (S.err.q || S.err.a) S.side = S.err.q ? 'q' : 'a';
+    if (!S.err.deck) S.focus = `rt:${S.side}`;
+    return false;
+  }
+  const d = S.draft;
+  if (S.modo === 'editar') {
+    Object.assign(cardById(S.editingId), { q: d.q, a: d.a, labels: [...d.labels] });
+    if (S.src) {
+      const all = store.get('daruma:edicoes') || {};
+      all[S.src.id] = { q: d.q, a: d.a, labels: S.src.labels ? [...d.labels] : null };
+      store.set('daruma:edicoes', all);
+      goBack(true);
+      return true;
+    }
+  }
+  if (S.editingId) {
+    Object.assign(cardById(S.editingId), { q: d.q, a: d.a, labels: [...d.labels] });
+    flash(S.editingId);
+    S.editingId = null; S.draft = S.stash || blank(); S.stash = null;
+  } else {
+    const c = { id: ++uid, q: d.q, a: d.a, labels: [...d.labels] };
+    S.lote.push(c); flash(c.id);
+    S.draft = blank(d.labels);
+  }
+  S.side = 'q'; S.focus = 'rt:q';
+  return true;
+}
+function loadCard(id) {
+  if (S.modo === 'editar') return;
+  if (!S.editingId) S.stash = S.draft;
+  const c = cardById(id);
+  S.editingId = c.id; S.draft = { q: c.q, a: c.a, labels: [...c.labels] }; S.err = {}; S.side = 'q'; S.open = null; S.focus = 'rt:q';
+}
+function cancelEdit() {
+  S.editingId = null; S.draft = S.stash || blank(); S.stash = null; S.err = {}; S.side = 'q'; S.focus = 'rt:q';
+}
+
+function dirty() {
+  if (S.editingId) { const c = cardById(S.editingId); return !!c && (c.q !== S.draft.q || c.a !== S.draft.a); }
+  return filled(S.draft.q) || filled(S.draft.a);
+}
+function finish(dest) {
+  S.open = null;
+  if (S.editingId && S.modo !== 'editar') cancelEdit();
+  if (dest === 'estudar') {
+    // a Study Session recebe só os Cards deste lote, na ordem em que foram criados
+    store.set('daruma:lote', { deck: S.deck || 'Novo Deck', cards: S.lote.map((c) => ({ q: c.q, a: c.a })) });
+    return ir('study-session.html?origem=lote');
+  }
+  if (S.modo === 'editar') return goBack(false);
+  ir(DECK_ID[S.deck] ? `decks.html?tela=deck&deck=${DECK_ID[S.deck]}` : 'decks.html');
+}
+function leave(dest) {
+  if (dirty()) { S.open = 'discard'; S.leaveTo = dest; return; }
+  finish(dest);
+}
+/* "Estudar agora" salva o Card em edição se ele estiver completo; incompleto, pergunta antes de descartar. */
+function estudar() {
+  if (S.editingId || complete(S.draft)) { if (!saveDraft()) return; }
+  if (!S.lote.length) return toast('info', 'Salve pelo menos um Card para estudar.');
+  leave('estudar');
+}
+function primary() {
+  if (S.side === 'q') { S.side = 'a'; S.focus = 'rt:a'; } else saveDraft();
+  render();
+}
+
+/* ---------- barra do protótipo (fora do design) ---------- */
+function switcher() {
+  const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
+  return `
+  <div data-keep class="fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-1 rounded-full bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10 md:bottom-4" style="font-family:system-ui,sans-serif">
+    <select data-sel="tela" class="h-8 max-w-[8.5rem] rounded-full bg-transparent px-2 hover:bg-white/15 sm:max-w-none" style="color-scheme:dark" aria-label="Estado">
+      ${Object.entries(TELAS).map(([k, l]) => `<option value="${k}" ${k === S.tela ? 'selected' : ''}>${l}</option>`).join('')}
+    </select>
+    <button data-act="tema" class="${b}" aria-label="Trocar tema">${ic(S.tema === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
+    <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+function screen() {
+  return editor() + overlays() + toasts();
+}
+
+function focusEnd(el) {
+  el.focus();
+  if (el.isContentEditable) {
+    const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  } else if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length);
+}
+
+function render() {
+  const root = document.documentElement;
+  root.classList.toggle('dark', S.tema === 'escuro');
+  const app = document.getElementById('app');
+  if (S.frame === 'mobile' && !S.embed) {
+    const src = `?tela=${S.tela}&tema=${S.tema}&embed=1`;
+    const frame = app.querySelector('iframe');
+    if (!frame || frame.dataset.src !== src) app.innerHTML = `
+      <div class="grid min-h-screen place-items-center bg-muted p-6 pb-24">
+        <iframe data-src="${src}" src="${src}" title="Mobile 390px" class="h-[844px] max-h-[calc(100vh-7rem)] w-[390px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-background shadow-2xl"></iframe>
+      </div>`;
+  } else {
+    // re-render troca o DOM: devolve o foco ao campo que estava ativo (ou ao pedido em S.focus)
+    const fk = S.focus || document.activeElement?.dataset?.fk;
+    S.focus = null;
+    app.innerHTML = screen();
+    const el = fk && app.querySelector(`[data-fk="${fk}"]`);
+    if (el) focusEnd(el);
+  }
+  document.getElementById('switcher').innerHTML = S.embed ? '' : switcher();
+}
+
+/* ---------- eventos ---------- */
+// botões da barra de formatação não tiram o foco do campo
+document.addEventListener('mousedown', (e) => {
+  const t = e.target.closest('[data-cmd]');
+  if (!t) return;
+  e.preventDefault();
+  runCmd(t.dataset.cmd, t.dataset.for);
+});
+
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.dataset.rt) {
+    if (t.innerHTML === '<br>') t.innerHTML = '';
+    setRt(t.dataset.rt, t.innerHTML);
+  } else if (t.hasAttribute('data-deck')) {
+    S.deck = t.value;
+    if (S.err.deck) { delete S.err.deck; render(); }
+  } else if (t.hasAttribute('data-lq')) { S.lq = t.value; render(); }
+});
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) {
+    if (S.open && !e.target.closest('[data-keep]')) { S.open = null; render(); }
+    return;
+  }
+  const act = el.dataset.act, i = act.indexOf(':');
+  const k = i < 0 ? act : act.slice(0, i), arg = i < 0 ? '' : act.slice(i + 1);
+  const [scope, name] = arg.split('|');
+  switch (k) {
+    case 'toggle': S.open = S.open === arg ? null : arg; S.lq = ''; if (arg.startsWith('labels')) S.focus = 'lq'; break;
+    case 'close': if (S.open === 'labels-draft') S.focus = `rt:${S.side}`; S.open = null; break;
+    case 'label': toggleLabel(scope, name); S.focus = 'lq'; break;
+    case 'newlabel': if (!S.allLabels.includes(name)) S.allLabels.push(name); if (!getLabels(scope).includes(name)) toggleLabel(scope, name); S.lq = ''; S.focus = 'lq'; break;
+    case 'unlabel': toggleLabel(scope, name); break;
+    case 'save': saveDraft(); break;
+    case 'editar': loadCard(arg); break;
+    case 'cancelar-edicao': cancelEdit(); break;
+    case 'side': S.side = arg; S.focus = `rt:${arg}`; break;
+    case 'estudar': estudar(); break;
+    case 'sair': leave('sair'); break;
+    case 'descartar': S.draft = blank(); finish(S.leaveTo); break;
+    case 'voltar': S.view = 'editor'; S.focus = 'rt:q'; break;
+    case 'reset': preset(S.tela); break;
+    case 'tema': S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; syncURL(); break;
+    case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
+    case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
+  }
+  render();
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.sel === 'tela') { preset(e.target.value); syncURL(); render(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && S.view === 'editor' && !S.open) { e.preventDefault(); primary(); return; }
+  if (t.hasAttribute?.('data-lq') && e.key === 'Enter') {
+    e.preventDefault();
+    const scope = S.open.replace(/^labels-/, ''), q = S.lq.trim().toLowerCase();
+    if (!q) return;
+    if (!S.allLabels.includes(q)) S.allLabels.push(q);
+    if (!getLabels(scope).includes(q)) toggleLabel(scope, q);
+    S.lq = ''; S.focus = 'lq'; render();
+    return;
+  }
+  if (e.key === 'Escape' && S.open) { S.open = null; render(); return; }
+});
+
+preset(S.tela);
+syncURL();
+render();
+</script>
+</body>
+</html>

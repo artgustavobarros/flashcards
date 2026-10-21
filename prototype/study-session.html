@@ -1,0 +1,649 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Tela da Study Session".
+  Pergunta: como é a Study Session no mobile e no desktop (pergunta, revelar a resposta, Rating, progresso,
+  Comments do Card e resumo no fim)?
+  Decisão: "Folha". Página corrida: a resposta aparece abaixo da pergunta; 4 botões de Rating em linha
+  (2×2 abaixo de 340px), sem intervalo; barra de progresso e contagens "novos · revisões · de novo".
+  As variantes descartadas (Card que vira, pilha com arrastar) estão no branch prototype/study-session.
+  Parâmetros: ?origem=revisao|deck|lote|resto · ?deck=<id> (com origem=deck, o Deck de decks.html) · ?tela=pergunta|resposta|de-novo|comments|sair|resumo
+              · ?tema=claro|escuro · ?frame=mobile.
+  Ticket "Edição e reinício nos protótipos": lápis ao lado de Comments abre o editor no modo "editar um Card";
+  ao salvar, a sessão volta ao mesmo Card, no mesmo lado, com "Card salvo." (?volta=1&salvo=1). A sessão e as
+  edições ficam só nesta aba (sessionStorage: daruma:sessao, daruma:edicoes). Desfazer continua só para Rating.
+  Teclado (sem dica na tela): Espaço/Enter mostra a resposta · 1–4 dá o Rating · C abre os Comments · Esc sai.
+  Tokens e componentes vêm de prototype/fundacao-visual.html. Nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Study Session · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  kbd { font-family: inherit; font-size: .75em; border: 1px solid hsl(var(--border)); border-radius: 4px; padding: 0 .3em; }
+  /* conteúdo rich text (igual ao editor) */
+  .rt { overflow-wrap: anywhere; }
+  .rt b, .rt strong { font-weight: 650; }
+  .rt ul { list-style: disc; padding-left: 1.25rem; text-align: left; }
+  .rt ol { list-style: decimal; padding-left: 1.25rem; text-align: left; }
+  .rt code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: hsl(var(--muted)); padding: .1em .35em; border-radius: 6px; }
+  .rt pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8em; background: hsl(var(--muted)); padding: .75rem .9rem; border-radius: 10px; white-space: pre-wrap; margin: .5rem 0; text-align: left; }
+  .rt img { max-width: min(100%, 320px); border-radius: 10px; margin: .5rem auto; display: block; }
+  .rt .formula { display: inline-block; padding: 0 .45em; border-radius: 6px; background: hsl(var(--primary) / .1); font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+  .rise { animation: rise .22s ease-out; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher"></div>
+
+<script>
+/* ---------- parâmetros ---------- */
+const P = new URLSearchParams(location.search);
+const ORIGENS = { revisao: 'Daily Review (Início)', deck: '“Estudar” do Deck', lote: '“Estudar agora” (lote)' };
+const TELAS = { pergunta: 'Pergunta', resposta: 'Resposta à mostra', 'de-novo': 'Card de novo (após Errei)', comments: 'Comments abertos', sair: 'Sair no meio', resumo: 'Resumo final' };
+
+/* ---------- dados falsos ---------- */
+const IMG = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180"><rect width="320" height="180" fill="#d4d4d8"/><rect x="146" y="20" width="28" height="140" rx="14" fill="#a1a1aa"/><circle cx="160" cy="26" r="20" fill="#a1a1aa"/><circle cx="160" cy="154" r="20" fill="#a1a1aa"/><circle cx="160" cy="26" r="26" fill="none" stroke="#16a34a" stroke-width="4"/></svg>');
+// os mesmos Cards de decks.html; a revisão de hoje tem os 17 do Início (12 revisões, 4 atrasadas, e 5 novos)
+const IV = { novo: [1, 1, 2, 8], atrasado: [1, 2, 5, 13], revisao: [1, 4, 11, 26] };
+const C = (deck, estado, q, a, comments = []) => ({ deck, estado, iv: IV[estado], q, a, comments });
+const CARDS = {
+  biceps: C('Anatomia humana', 'atrasado', 'Qual músculo é o principal flexor do cotovelo?', 'O <b>bíceps braquial</b>, com ajuda do braquial e do braquiorradial.', [
+    { quando: '3 out', txt: 'Lembrar: o braquial é o mais forte, o bíceps é o “principal” por causa da supinação.' },
+    { quando: '12 out', txt: 'Caiu na prova do módulo 2.' },
+  ]),
+  sinoatrial: C('Anatomia humana', 'atrasado', 'Onde nasce o impulso elétrico do coração?', 'No <b>nó sinoatrial</b>, na parede do átrio direito.',
+    [{ quando: '15 out', txt: 'Ver o vídeo da aula 7 de novo, a parte do nó atrioventricular.' }]),
+  ossos: C('Anatomia humana', 'revisao', 'Quantos ossos tem o corpo humano adulto?', '<b>206</b> ossos.'),
+  femur: C('Anatomia humana', 'revisao', 'Qual é a parte destacada do fêmur?<img src="' + IMG + '" alt="Fêmur com a extremidade superior destacada">',
+    'A <b>cabeça do fêmur</b>, que se articula com o acetábulo do quadril.'),
+  mitral: C('Anatomia humana', 'revisao', 'Entre quais câmaras fica a valva mitral?',
+    'Entre o <b>átrio esquerdo</b> e o <b>ventrículo esquerdo</b>. Impede o refluxo de sangue durante a sístole.',
+    [{ quando: '18 set', txt: 'Mitral = bicúspide. Tricúspide fica do lado direito.' }]),
+  triceps: C('Anatomia humana', 'novo', 'Qual músculo é o principal extensor do cotovelo?', 'O <b>tríceps braquial</b>.'),
+  cervical: C('Anatomia humana', 'novo', 'Quantas vértebras tem a coluna cervical?', '<b>7</b> vértebras (C1 a C7).'),
+  neuronio: C('Anatomia humana', 'novo', 'Quais são as partes de um neurônio?', '<ul><li>Dendritos</li><li>Corpo celular</li><li>Axônio</li></ul>'),
+  putoff: C('Inglês: phrasal verbs', 'atrasado', 'O que significa <i>put off</i>?', '“Adiar.” Ex.: <i>Stop putting it off.</i>',
+    [{ quando: '20 out', txt: 'Confundo com put away (guardar).' }]),
+  runout: C('Inglês: phrasal verbs', 'revisao', '<i>We ran out of milk.</i> O que é <i>run out of</i>?', '“Ficar sem” alguma coisa.'),
+  getover: C('Inglês: phrasal verbs', 'revisao', 'O que significa <i>get over</i>?', '“Superar” uma doença, um término, um susto.'),
+  bringup: C('Inglês: phrasal verbs', 'revisao', 'O que é <i>bring up</i> um assunto?', '“Mencionar”, puxar o assunto.'),
+  lookforward: C('Inglês: phrasal verbs', 'novo', 'Traduza: <i>I’m looking forward to the trip.</i>', '“Estou ansioso pela viagem.” <i>Look forward to</i> pede verbo com <i>-ing</i> ou substantivo.'),
+  lookafter: C('Inglês: phrasal verbs', 'novo', 'O que significa <i>look after</i>?', '“Cuidar de.”'),
+  typeof: C('JavaScript', 'atrasado', 'O que este código imprime?<pre>console.log(typeof null);</pre>',
+    '<code>"object"</code>. É um erro histórico da linguagem que nunca foi corrigido para não quebrar sites antigos.'),
+  map: C('JavaScript', 'revisao', 'O que <code>[1, 2, 3].map(n =&gt; n * 2)</code> devolve?', 'Um <b>novo array</b>: <code>[2, 4, 6]</code>. O array original não muda.'),
+  promiseall: C('JavaScript', 'revisao', 'O que <code>Promise.all</code> faz se uma das Promises falhar?',
+    'Rejeita na hora, com o erro da primeira que falhou. As outras continuam rodando, mas o resultado delas se perde.', [
+    { quando: '2 out', txt: 'Se quiser todos os resultados, usar Promise.allSettled.' },
+    { quando: '9 out', txt: 'Perguntaram isso na entrevista da agência.' },
+  ]),
+};
+const SETS = {
+  revisao: { titulo: 'Revisão de hoje', cards: ['biceps', 'typeof', 'runout', 'mitral', 'femur', 'lookforward', 'ossos', 'map', 'putoff', 'sinoatrial', 'promiseall', 'bringup', 'triceps', 'getover', 'cervical', 'lookafter', 'neuronio'], amanhaBase: 14 },
+  deck: { titulo: 'Anatomia humana', cards: ['biceps', 'mitral', 'ossos', 'femur', 'sinoatrial', 'triceps', 'cervical', 'neuronio'], amanhaBase: 4, outros: 9 },
+  // "Continuar com os outros Decks" depois do Deck: o resto da revisão de hoje
+  resto: { titulo: 'Revisão de hoje', cards: ['typeof', 'runout', 'lookforward', 'map', 'putoff', 'promiseall', 'bringup', 'getover', 'lookafter'], amanhaBase: 10 },
+  lote: { titulo: 'Cards novos', sub: 'Anatomia humana', cards: ['triceps', 'cervical', 'neuronio'], amanhaBase: 0 },
+};
+// "Estudar" num Deck (?deck=<id> de decks.html): os Cards desse Deck na revisão de hoje; "resto" são os outros Decks
+const NOME_DECK = { anatomia: 'Anatomia humana', ingles: 'Inglês: phrasal verbs', js: 'JavaScript', historia: 'História do Brasil' };
+if (NOME_DECK[P.get('deck')]) {
+  const nome = NOME_DECK[P.get('deck')], doDeck = (id) => CARDS[id].deck === nome;
+  Object.assign(SETS.deck, { titulo: nome, cards: SETS.revisao.cards.filter(doDeck) });
+  SETS.deck.outros = SETS.revisao.cards.length - SETS.deck.cards.length;
+  SETS.resto.cards = SETS.revisao.cards.filter((id) => !doDeck(id));
+}
+// "Estudar agora" no editor: o lote que acabou de ser salvo (sessionStorage daruma:lote)
+try {
+  const lote = P.get('origem') === 'lote' && JSON.parse(sessionStorage.getItem('daruma:lote'));
+  if (lote && lote.cards.length) {
+    lote.cards.forEach((c, i) => { CARDS['lote' + i] = C(lote.deck, 'novo', c.q, c.a); });
+    Object.assign(SETS.lote, { sub: lote.deck, cards: lote.cards.map((_, i) => 'lote' + i) });
+  }
+} catch {}
+const RATINGS = [
+  { k: 1, nome: 'Errei' }, { k: 2, nome: 'Difícil' }, { k: 3, nome: 'Bom' }, { k: 4, nome: 'Fácil' },
+];
+
+/* ---------- estado ---------- */
+const S = {
+  origem: SETS[P.get('origem')] ? P.get('origem') : 'revisao',
+  tela: TELAS[P.get('tela')] ? P.get('tela') : 'pergunta',
+  tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
+  frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
+  embed: P.get('embed') === '1',
+};
+let toastId = 0;
+
+function startSession() {
+  const set = SETS[S.origem];
+  Object.assign(S, {
+    view: 'sessao', queue: [...set.cards], finished: [], first: {}, log: [], hist: [],
+    revealed: false, open: null, anim: null, draftComment: '', toasts: [], startedAt: Date.now(), fakeMin: null,
+  });
+}
+/* Cada item do seletor "tela" é um estado inicial pronto; depois a navegação é livre. */
+function preset(tela) {
+  S.tela = tela;
+  startSession();
+  const ids = SETS[S.origem].cards;
+  if (tela === 'resposta' || tela === 'comments') S.revealed = true;
+  if (tela === 'comments') S.open = 'comments';
+  if (tela === 'sair') { rate(3); rate(1); S.open = 'sair'; }
+  if (tela === 'de-novo') {
+    rate(1);
+    ids.slice(1).forEach((_, i) => rate([3, 2, 4][i % 3]));
+  }
+  if (tela === 'resumo') {
+    const plan = [1, 3, 2, 3, 4, 3, 3, 1];
+    ids.forEach((_, i) => rate(plan[i % plan.length]));
+    while (S.queue.length) rate(3);
+    S.fakeMin = 7;
+  }
+  S.hist = [];
+}
+/* ---------- ponte com o editor (só nesta aba) ---------- */
+const store = {
+  get(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const SALVA = ['queue', 'finished', 'first', 'log', 'hist', 'revealed', 'startedAt', 'fakeMin'];
+// edições salvas no editor: { <id>: { q, a, labels } }; a sessão só usa a pergunta e a resposta
+Object.entries(store.get('daruma:edicoes') || {}).forEach(([id, e]) => { if (CARDS[id]) Object.assign(CARDS[id], { q: e.q, a: e.a }); });
+function editar() {
+  const c = cur(), p = new URLSearchParams({ origem: S.origem, ...(P.get('deck') ? { deck: P.get('deck') } : {}), tela: S.tela, volta: '1' });
+  store.set('daruma:sessao', Object.fromEntries(SALVA.map((k) => [k, S[k]])));
+  store.set('daruma:editar', { id: c.id, q: c.q, a: c.a, labels: null, deck: c.deck, rated: c.estado !== 'novo', volta: 'study-session.html?' + p });
+  location.href = `editor-de-card.html?tela=editar&de=sessao&tema=${S.tema}${S.embed ? '&embed=1' : ''}`;
+}
+function syncURL() {
+  const p = new URLSearchParams({ origem: S.origem, ...(P.get('deck') ? { deck: P.get('deck') } : {}), tela: S.tela, tema: S.tema });
+  if (S.frame === 'mobile') p.set('frame', 'mobile');
+  if (S.embed) p.set('embed', '1');
+  history.replaceState(null, '', '?' + p);
+}
+
+/* ---------- regras da sessão ---------- */
+const cur = () => S.queue[0] && { id: S.queue[0], ...CARDS[S.queue[0]] };
+const isRepeat = (id) => id in S.first;
+const total = () => SETS[S.origem].cards.length;
+
+/* Errei: o Card volta ao fim desta sessão (a data já fica para amanhã). Outro Rating tira o Card da fila. */
+function rate(k) {
+  if (!S.queue.length) return;
+  S.hist.push(JSON.stringify({ queue: S.queue, finished: S.finished, first: S.first, log: S.log }));
+  const id = S.queue.shift();
+  if (!isRepeat(id)) S.first[id] = k;
+  S.log.push({ id, k });
+  if (k === 1) S.queue.push(id); else S.finished.push(id);
+  S.revealed = false; S.anim = 'next';
+  if (!S.queue.length) { S.view = 'resumo'; S.open = null; }
+  S.draftComment = '';
+}
+/* Sair só pede confirmação se já houver Rating dado e Cards faltando. */
+function askExit() {
+  if (S.queue.length && S.log.length) S.open = 'sair';
+  else sair();
+}
+function undo() {
+  const h = S.hist.pop();
+  if (!h) return;
+  Object.assign(S, JSON.parse(h), { revealed: true, view: 'sessao', anim: null });
+}
+function reveal() {
+  if (S.revealed || S.view !== 'sessao') return;
+  S.revealed = true; S.anim = 'reveal';
+}
+function counts() {
+  const q = S.queue.map((id) => ({ id, ...CARDS[id] }));
+  return {
+    novos: q.filter((c) => !isRepeat(c.id) && c.estado === 'novo').length,
+    revisoes: q.filter((c) => !isRepeat(c.id) && c.estado !== 'novo').length,
+    deNovo: q.filter((c) => isRepeat(c.id)).length,
+  };
+}
+
+/* ---------- ícones (traços estilo lucide) ---------- */
+const PATHS = {
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  undo: '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
+  pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
+  msg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  rotate: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  ok: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  hash: '<line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/>',
+};
+const ic = (n, cls = 'h-5 w-5') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${PATHS[n]}</svg>`;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const plain = (h) => { const d = document.createElement('div'); d.innerHTML = String(h || '').replace(/<pre>/g, ' ').replace(/<\/(li|p|div|pre)>|<br>/g, ' '); return d.textContent.replace(/\s+/g, ' ').trim(); };
+
+/* ---------- componentes base (iguais à fundação) ---------- */
+const BTN_BASE = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-40';
+const BTN_SIZE = { sm: 'h-8 px-3 text-xs', md: 'h-10 px-4 text-sm', lg: 'h-12 px-6 text-base', icon: 'h-10 w-10' };
+const BTN_KIND = {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+};
+const btn = (kind = 'primary', size = 'md', extra = '') => `${BTN_BASE} ${BTN_SIZE[size]} ${BTN_KIND[kind]} ${extra}`;
+const INPUT = 'flex h-10 w-full rounded-full border border-input bg-background px-4 text-base md:text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background';
+const badge = (t, cls) => `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}">${t}</span>`;
+const BADGE = {
+  novo: () => badge('Novo', 'bg-primary/10 text-primary'),
+  atrasado: () => badge('Atrasado', 'bg-destructive/10 text-destructive'),
+  revisao: () => '',
+  deNovo: () => badge('De novo', 'bg-warning/15 text-warning'),
+};
+const cardBadge = (c) => isRepeat(c.id) ? BADGE.deNovo() : BADGE[c.estado]();
+const deckLine = (c) => S.origem === 'revisao' ? `<span class="text-xs font-medium text-muted-foreground">${esc(c.deck)}</span>` : '';
+
+/* ---------- peças comuns da barra do topo ---------- */
+const btnSair = () => `<button data-act="sair" class="${btn('ghost', 'icon')}" aria-label="Sair da sessão (Esc)" title="Sair (Esc)">${ic('x')}</button>`;
+const btnUndo = () => `<button data-act="undo" class="${btn('ghost', 'icon')}" ${S.hist.length ? '' : 'disabled'} aria-label="Desfazer o último Rating" title="Desfazer o último Rating">${ic('undo', 'h-[18px] w-[18px]')}</button>`;
+const btnEditar = () => `<button data-act="editar" class="${btn('ghost', 'icon')}" aria-label="Editar Card" title="Editar Card">${ic('pencil', 'h-[18px] w-[18px]')}</button>`;
+function btnComments(c) {
+  const n = c.comments.length;
+  return `<button data-act="comments" class="${btn(S.open === 'comments' ? 'secondary' : 'ghost', 'md', 'px-3')}" aria-label="Comments do Card (C)" title="Comments (C)">
+    ${ic('msg', 'h-[18px] w-[18px]')}${n ? `<span class="font-mono text-sm tnum">${n}</span>` : ''}</button>`;
+}
+const repeatNote = (c) => isRepeat(c.id)
+  ? `<p class="mt-3 text-center text-xs text-muted-foreground">Você errou este Card há pouco. Ele já volta amanhã; agora é só para fixar.</p>` : '';
+
+/* ---------- sessão: a resposta aparece abaixo da pergunta ---------- */
+function session(c) {
+  const done = S.finished.length, n = total(), k = counts();
+  const top = `
+    <header class="shrink-0">
+      <div class="mx-auto flex h-14 max-w-3xl items-center gap-1 px-2 md:px-4">
+        ${btnSair()}
+        <div class="mx-2 flex flex-1 items-center gap-3">
+          <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full bg-primary transition-all" style="width:${(done / n) * 100}%"></div></div>
+          <span class="font-mono text-sm text-muted-foreground tnum">${done}/${n}</span>
+        </div>
+        ${btnUndo()}${btnEditar()}${btnComments(c)}
+      </div>
+      <div class="flex justify-center gap-4 pb-1 text-xs font-medium">
+        <span class="text-primary" title="Cards novos que faltam"><span class="font-mono tnum">${k.novos}</span> novos</span>
+        <span class="text-muted-foreground" title="Revisões que faltam"><span class="font-mono tnum">${k.revisoes}</span> revisões</span>
+        <span class="text-warning" title="Cards que você errou nesta sessão"><span class="font-mono tnum">${k.deNovo}</span> de novo</span>
+      </div>
+    </header>`;
+  const body = `
+    <div class="mx-auto w-full max-w-2xl px-5 pb-8 pt-6 md:pt-12 ${S.anim === 'next' ? 'rise' : ''}">
+      <div class="flex items-center gap-2">${deckLine(c)}${cardBadge(c)}</div>
+      <div class="rt mt-3 font-display text-2xl font-medium leading-snug md:text-3xl">${c.q}</div>
+      ${S.revealed ? `
+        <div class="${S.anim === 'reveal' ? 'rise' : ''}">
+          <div class="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-muted-foreground"><span class="h-px flex-1 bg-border"></span>Resposta<span class="h-px flex-1 bg-border"></span></div>
+          <div class="rt text-lg leading-relaxed md:text-xl">${c.a}</div>
+        </div>` : ''}
+    </div>`;
+  const tone = { 1: 'text-destructive', 2: 'text-warning', 3: '', 4: 'text-foreground' };
+  const foot = S.revealed ? `
+    <div class="grid grid-cols-2 gap-2 min-[340px]:grid-cols-4">
+      ${RATINGS.map((r) => `
+        <button data-act="rate:${r.k}" class="${BTN_BASE} h-14 min-w-0 rounded-xl text-sm font-semibold ${r.k === 3 ? BTN_KIND.primary : BTN_KIND.outline + ' ' + tone[r.k]}">${r.nome}</button>`).join('')}
+    </div>${repeatNote(c)}`
+    : `<button data-act="reveal" class="${btn('primary', 'lg', 'h-14 w-full')}">Mostrar resposta</button>`;
+  return frame(top, body, `<div class="mx-auto max-w-2xl">${foot}</div>`);
+}
+
+/* ---------- moldura em modo foco (sem header nem tab bar) ---------- */
+function frame(top, body, foot) {
+  const c = cur();
+  return `
+  <div class="flex h-[100dvh] overflow-hidden">
+    <div class="flex min-w-0 flex-1 flex-col">
+      ${top}
+      <main class="flex flex-1 flex-col overflow-y-auto">${body}</main>
+      <footer class="shrink-0 px-4 pt-2 ${S.embed ? 'pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-8' : 'pb-16 md:pb-20'}">${foot}</footer>
+    </div>
+    ${S.open === 'comments' ? commentsAside(c) : ''}
+  </div>`;
+}
+
+/* ---------- Comments: bottom sheet no mobile, painel lateral no desktop ---------- */
+function commentsList(c) {
+  if (!c.comments.length) return `<div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center"><span class="text-muted-foreground">${ic('msg', 'h-6 w-6')}</span><p class="text-sm text-muted-foreground">Nenhum Comment neste Card. Anote uma dica, uma fonte ou o que confundiu você.</p></div>`;
+  return `<ol class="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+    ${c.comments.map((m) => `<li class="rounded-lg bg-muted/60 px-3.5 py-2.5"><p class="text-sm">${esc(m.txt)}</p><p class="mt-1 text-xs text-muted-foreground">${esc(m.quando)}</p></li>`).join('')}
+  </ol>`;
+}
+function commentsBody(c, fk) {
+  return `
+    <div class="flex items-center justify-between px-4 pt-4">
+      <div><p class="font-display text-lg font-semibold">Comments</p><p class="line-clamp-1 text-xs text-muted-foreground">${esc(plain(c.q))}</p></div>
+      <button data-act="close" class="${btn('ghost', 'icon')}" aria-label="Fechar">${ic('x')}</button>
+    </div>
+    ${commentsList(c)}
+    <form data-form="comment" class="flex gap-2 border-t p-3">
+      <input data-cm data-fk="${fk}" class="${INPUT}" placeholder="Escreva um Comment…" value="${esc(S.draftComment)}" aria-label="Novo Comment">
+      <button class="${btn('primary', 'icon')}" aria-label="Salvar Comment">${ic('send', 'h-4 w-4')}</button>
+    </form>`;
+}
+const commentsAside = (c) => `
+  <aside data-keep class="hidden w-96 shrink-0 flex-col border-l bg-card md:flex">${commentsBody(c, 'cm-d')}</aside>`;
+const commentsSheet = (c) => `
+  <div class="fixed inset-0 z-50 flex items-end md:hidden">
+    <div class="absolute inset-0 bg-black/40" data-act="close"></div>
+    <div data-keep class="relative flex max-h-[75dvh] min-h-[45dvh] w-full flex-col rounded-t-xl bg-popover pb-[env(safe-area-inset-bottom)] text-popover-foreground shadow-pop">
+      <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-border"></div>
+      ${commentsBody(c, 'cm-m')}
+    </div>
+  </div>`;
+
+/* ---------- sair no meio ---------- */
+function exitDialog() {
+  const n = S.queue.length, o = S.origem;
+  const resto = o === 'lote'
+    ? 'Os que faltam continuam como Cards novos e entram nas próximas Daily Reviews.'
+    : 'Os que faltam continuam na revisão de hoje.';
+  return `
+  <div class="fixed inset-0 z-50 grid place-items-center p-4">
+    <div class="absolute inset-0 bg-black/50" data-act="close"></div>
+    <div data-keep role="dialog" aria-modal="true" class="relative w-full max-w-md rounded-xl border bg-popover p-6 text-popover-foreground shadow-pop">
+      <h2 class="font-display text-lg font-semibold">Sair da sessão?</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Falta${n === 1 ? '' : 'm'} <span class="font-mono tnum">${n}</span> Card${n === 1 ? '' : 's'}. Os Ratings que você já deu ficam salvos. ${resto}</p>
+      <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button data-act="sair-ok" class="${btn('outline')}">Sair</button>
+        <button data-act="close" class="${btn('primary')}">Continuar estudando</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- resumo final ---------- */
+function summary() {
+  const set = SETS[S.origem], o = S.origem, ids = set.cards, n = ids.length;
+  const dist = RATINGS.map((r) => ({ ...r, n: ids.filter((id) => S.first[id] === r.k).length }));
+  const acertos = n - dist[0].n;
+  const min = S.fakeMin ?? Math.round((Date.now() - S.startedAt) / 60000);
+  const tempo = min < 1 ? 'menos de 1 min' : `${min} min`;
+  const amanha = set.amanhaBase + ids.filter((id) => S.first[id] === 1 || CARDS[id].iv[S.first[id] - 1] === 1).length;
+  const titulo = { revisao: 'Revisão de hoje concluída', deck: `${set.titulo} em dia`, lote: 'Cards novos estudados' }[o];
+  const sub = {
+    revisao: 'O aviso de hoje sai do Início e as notificações param até amanhã.',
+    deck: 'Os Cards deste Deck que venciam hoje já foram revisados.',
+    lote: 'Eles entram no agendamento normal e voltam nas próximas Daily Reviews.',
+  }[o];
+  const segTone = { 1: 'bg-destructive', 2: 'bg-warning', 3: 'bg-primary', 4: 'bg-primary/50' };
+  const dot = { 1: 'bg-destructive', 2: 'bg-warning', 3: 'bg-primary', 4: 'bg-primary/50' };
+  const stat = (icon, v, l) => `<div class="rounded-xl border bg-card p-4 shadow-card"><span class="text-muted-foreground">${ic(icon, 'h-4 w-4')}</span><p class="mt-2 font-display text-2xl font-semibold tnum">${v}</p><p class="text-xs text-muted-foreground">${l}</p></div>`;
+  const voltar = o === 'revisao' ? 'Voltar ao Início' : `Voltar ao Deck`;
+  return `
+  <div class="flex min-h-[100dvh] flex-col">
+    <header class="flex h-14 shrink-0 items-center px-2 md:px-4"><button data-act="voltar" class="${btn('ghost', 'icon')}" aria-label="${voltar}">${ic('x')}</button></header>
+    <main class="mx-auto flex w-full max-w-lg flex-1 flex-col px-5 pb-8 rise">
+      <div class="grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">${ic('check', 'h-7 w-7')}</div>
+      <h1 class="mt-4 font-display text-3xl font-semibold leading-tight">${esc(titulo)}</h1>
+      <p class="mt-1 text-muted-foreground">${sub}</p>
+
+      <div class="mt-6 grid grid-cols-3 gap-2">
+        ${stat('layers', n, n === 1 ? 'Card' : 'Cards')}
+        ${stat('target', `${acertos}/${n}`, 'certos de primeira')}
+        ${stat('clock', tempo.replace(' min', '<span class="text-base"> min</span>'), 'de estudo')}
+      </div>
+
+      <div class="mt-4 rounded-xl border bg-card p-4 shadow-card">
+        <p class="text-sm font-medium">Primeiro Rating de cada Card</p>
+        <div class="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full">${dist.filter((d) => d.n).map((d) => `<span class="${segTone[d.k]}" style="flex:${d.n}"></span>`).join('')}</div>
+        <div class="mt-3 grid grid-cols-4 gap-2 text-xs">
+          ${dist.map((d) => `<div><span class="inline-block h-2 w-2 rounded-full ${dot[d.k]}"></span> ${d.nome}<p class="font-mono text-base font-semibold text-foreground tnum">${d.n}</p></div>`).join('')}
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3 rounded-xl border bg-card p-4 shadow-card">
+        <span class="text-muted-foreground">${ic('calendar', 'h-5 w-5')}</span>
+        <p class="text-sm">${o === 'lote'
+          ? `O primeiro volta <b>amanhã</b>. Até lá, nada a fazer neste lote.`
+          : `Próxima revisão: <b>amanhã</b>, <span class="font-mono tnum">${amanha}</span> Cards.`}</p>
+      </div>
+
+      ${o === 'deck' ? `
+      <div class="mt-4 flex items-center gap-3 rounded-xl border border-dashed p-4">
+        <span class="text-muted-foreground">${ic('info', 'h-5 w-5')}</span>
+        <p class="flex-1 text-sm">A revisão de hoje ainda tem <span class="font-mono tnum">${set.outros}</span> Cards em outros Decks.</p>
+        <button data-act="resto" class="${btn('outline', 'sm')}">Revisar</button>
+      </div>` : ''}
+
+      <div class="mt-auto pt-8 ${S.embed ? '' : 'pb-12'}"><button data-act="voltar" class="${btn('primary', 'lg', 'w-full')}">${voltar}</button></div>
+    </main>
+  </div>`;
+}
+
+/* ---------- saída: volta para a tela de onde a sessão começou ---------- */
+const DECK_ID = { 'Anatomia humana': 'anatomia', 'Inglês: phrasal verbs': 'ingles', 'JavaScript': 'js', 'História do Brasil': 'historia' };
+function sair(dest = 'origem') {
+  if (dest === 'resto') return ir('study-session.html?origem=resto' + (P.get('deck') ? '&deck=' + P.get('deck') : ''));
+  // revisão: o Início mostra o dia concluído, em andamento ou ainda pendente
+  if (S.origem === 'revisao' || S.origem === 'resto') return ir(`home.html?dia=${!S.queue.length ? 'concluida' : S.log.length ? 'andamento' : 'pendente'}`);
+  const deck = SETS[S.origem].sub || SETS[S.origem].titulo;
+  return ir(DECK_ID[deck] ? `decks.html?tela=deck&deck=${DECK_ID[deck]}` : 'decks.html');
+}
+
+/* ---------- toasts ---------- */
+function toasts() {
+  return `<div class="pointer-events-none fixed inset-x-3 bottom-28 z-[60] flex flex-col gap-2 md:inset-x-auto md:bottom-6 md:right-6 md:w-96" aria-live="polite">
+    ${S.toasts.map((t) => `
+      <div class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-pop">
+        <span class="text-success">${ic('ok', 'h-5 w-5')}</span><p class="flex-1 text-sm">${t.msg}</p>
+      </div>`).join('')}
+  </div>`;
+}
+function toast(msg) {
+  const id = ++toastId;
+  S.toasts.push({ id, msg });
+  setTimeout(() => { S.toasts = S.toasts.filter((t) => t.id !== id); render(); }, 3000);
+}
+
+/* ---------- barra do protótipo (fora do design) ---------- */
+function switcher() {
+  const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
+  const sel = (key, obj, label, cls = '') => `
+    <select data-sel="${key}" class="h-8 rounded-full bg-transparent px-2 hover:bg-white/15 ${cls}" style="color-scheme:dark" aria-label="${label}">
+      ${Object.entries(obj).map(([k, l]) => `<option value="${k}" ${k === S[key] ? 'selected' : ''}>${l}</option>`).join('')}
+    </select>`;
+  const extra = S.barOpen ? 'flex' : 'hidden md:flex';
+  return `
+  <div data-keep class="fixed bottom-2 left-2 z-[100] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-1 md:bottom-4 md:left-4 rounded-3xl bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10 md:rounded-full" style="font-family:system-ui,sans-serif">
+    <span class="px-2 font-medium">Protótipo</span>
+    <button data-act="bar" class="${b} md:hidden" aria-label="Mais opções do protótipo">${S.barOpen ? ic('x', 'h-4 w-4') : '⋯'}</button>
+    <div class="${extra} flex-wrap items-center gap-1">
+    <span class="mx-1 hidden h-5 w-px bg-white/20 md:block"></span>
+    ${sel('origem', ORIGENS, 'Origem da sessão', 'max-w-[9rem]')}
+    ${sel('tela', TELAS, 'Estado', 'max-w-[9rem]')}
+    <button data-act="tema" class="${b}" aria-label="Trocar tema">${ic(S.tema === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
+    <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+function screen() {
+  if (S.view === 'resumo') return summary() + toasts();
+  const c = cur();
+  const v = session(c);
+  return v + (S.open === 'comments' ? commentsSheet(c) : '') + (S.open === 'sair' ? exitDialog() : '') + toasts();
+}
+
+function render() {
+  document.documentElement.classList.toggle('dark', S.tema === 'escuro');
+  const app = document.getElementById('app');
+  if (S.frame === 'mobile' && !S.embed) {
+    const p = new URLSearchParams({ origem: S.origem, ...(P.get('deck') ? { deck: P.get('deck') } : {}), tela: S.tela, tema: S.tema, embed: '1' });
+    const src = '?' + p, frame = app.querySelector('iframe');
+    if (!frame || frame.dataset.src !== src) app.innerHTML = `
+      <div class="grid min-h-screen place-items-center bg-muted p-6 pb-24">
+        <iframe data-src="${src}" src="${src}" title="Mobile 390px" class="h-[844px] max-h-[calc(100vh-7rem)] w-[390px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-background shadow-2xl"></iframe>
+      </div>`;
+  } else {
+    const fk = document.activeElement?.dataset?.fk;
+    app.innerHTML = screen();
+    const el = fk && app.querySelector(`[data-fk="${fk}"]`);
+    if (el) { el.focus(); el.setSelectionRange?.(el.value.length, el.value.length); }
+    S.anim = null;
+  }
+  document.getElementById('switcher').innerHTML = S.embed ? '' : switcher();
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act, i = act.indexOf(':');
+  const k = i < 0 ? act : act.slice(0, i), arg = i < 0 ? '' : act.slice(i + 1);
+  switch (k) {
+    case 'reveal': if (S.revealed) return; reveal(); break;
+    case 'rate': rate(+arg); break;
+    case 'undo': undo(); break;
+    case 'comments': S.open = S.open === 'comments' ? null : 'comments'; break;
+    case 'editar': return editar();
+    case 'close': S.open = null; break;
+    case 'sair': askExit(); break;
+    case 'sair-ok': S.open = null; return sair();
+    case 'voltar': return sair();
+    case 'resto': return sair('resto');
+    case 'reset': preset('pergunta'); syncURL(); break;
+    case 'bar': S.barOpen = !S.barOpen; break;
+    case 'tema': S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; syncURL(); break;
+    case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
+  }
+  render();
+});
+
+document.addEventListener('input', (e) => { if (e.target.hasAttribute('data-cm')) S.draftComment = e.target.value; });
+
+document.addEventListener('submit', (e) => {
+  if (e.target.dataset.form !== 'comment') return;
+  e.preventDefault();
+  const txt = S.draftComment.trim();
+  if (!txt) return;
+  CARDS[S.queue[0]].comments.push({ quando: 'agora', txt });
+  S.draftComment = '';
+  toast('Comment salvo.');
+  render();
+});
+
+document.addEventListener('change', (e) => {
+  const key = e.target.dataset.sel;
+  if (!key) return;
+  if (key === 'origem') S.origem = e.target.value;
+  preset(key === 'tela' ? e.target.value : S.tela);
+  syncURL(); render();
+});
+
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  const typing = t.matches?.('input, textarea, select, [contenteditable]');
+  if (typing) { if (e.key === 'Escape') { S.open = null; render(); } return; }
+  if (S.view !== 'sessao') return;
+  if (e.key === 'Escape') { if (S.open) S.open = null; else askExit(); render(); return; }
+  if (S.open === 'sair') return;
+  if ((e.key === ' ' || e.key === 'Enter') && !S.revealed) { e.preventDefault(); reveal(); render(); return; }
+  if (/^[1-4]$/.test(e.key) && S.revealed) { rate(+e.key); render(); return; }
+  if (e.key === 'c' || e.key === 'C') { S.open = S.open === 'comments' ? null : 'comments'; render(); }
+});
+
+preset(S.tela);
+// de volta do editor: mesma fila, mesmo Card, mesmo lado
+const salva = P.get('volta') === '1' && store.get('daruma:sessao');
+if (salva) { Object.assign(S, salva); if (P.get('salvo') === '1') toast('Card salvo.'); }
+syncURL();
+render();
+</script>
+</body>
+</html>

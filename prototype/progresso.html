@@ -1,0 +1,886 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Tela do dashboard".
+  Pergunta: como o Progresso dispõe as métricas de "Métricas do dashboard" no mobile e no desktop,
+  em que ordem e tamanho, e como fica o estado vazio (nenhum Rating ainda)?
+  Decisão: variante "Painel". Filtros numa linha (combobox de Deck + Período). Desktop: grade de blocos.
+  Mobile: blocos parecidos em 2 carrosséis ("Resumo" e "Ao longo do tempo") e Por Deck abaixo.
+  Evolução: % de acertos num painel próprio acima das barras; acertos sobem e erros descem do zero, barras retas.
+  As variantes descartadas estão no branch prototype/dashboard.
+  Parâmetros: ?dados=cheio|vazio · ?deck=todos|anatomia|ingles|js|historia · ?periodo=7|30|90|tudo · ?abrir=deck · ?tema=claro|escuro · ?frame=mobile.
+  Base: prototype/fundacao-visual.html (tokens, shell, componentes). Dados falsos, nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Progresso · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+          'chart-ok': c('chart-ok'), 'chart-err': c('chart-err'),
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+    /* gráficos: acertos × erros, validados para daltonismo (validate_palette.js) */
+    --chart-ok: 152 60% 36%; --chart-err: 6 65% 70%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+    --chart-ok: 146 50% 46%; --chart-err: 6 45% 45%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher"></div>
+<div id="tip" class="pointer-events-none fixed z-[90] hidden max-w-[16rem] rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-pop"></div>
+
+<script>
+/* ---------- estado ---------- */
+const P = new URLSearchParams(location.search);
+const PERIODOS = { 7: '7 dias', 30: '30 dias', 90: '90 dias', tudo: 'Tudo' };
+const S = {
+  dados: P.get('dados') === 'vazio' ? 'vazio' : 'cheio',
+  deck: P.get('deck') || 'todos',
+  periodo: PERIODOS[P.get('periodo')] ? P.get('periodo') : '30',
+  tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
+  frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
+  embed: P.get('embed') === '1',
+  email: P.get('email') === 'pendente', bellSeen: false,
+  open: P.get('abrir') === 'deck' ? 'deck' : null, nav: 'progresso', toasts: [],
+};
+let toastId = 0;
+
+function params(extra = {}) {
+  const p = new URLSearchParams({ dados: S.dados, deck: S.deck, periodo: S.periodo, tema: S.tema });
+  Object.entries(extra).forEach(([k, v]) => p.set(k, v));
+  return p;
+}
+function syncURL() {
+  const p = params();
+  if (S.email) p.set('email', 'pendente');
+  if (S.frame === 'mobile') p.set('frame', 'mobile');
+  if (S.embed) p.set('embed', '1');
+  history.replaceState(null, '', '?' + p);
+}
+
+/* ---------- dados falsos ---------- */
+// hoje = 21 out 2026 (quarta), o mesmo dia de decks.html. Histórico de N dias antes de hoje.
+const N = 148;
+const dateOf = (i) => new Date(2026, 9, 21 - (N - i));
+const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const fmt = (d) => `${d.getDate()} ${MES[d.getMonth()]}`;
+
+// est = [Novo, Em aprendizado, Maduro], como em decks.html; prev = Cards que vencem de hoje até daqui a 6 dias (amanhã: 14, como no Início); hoje = "para hoje" do Início
+const DECKS = [
+  { id: 'anatomia', n: 'Anatomia humana', cards: 42, hoje: 8, est: [3, 23, 16], acc: .82, w: 1, start: 0, prev: [8, 4, 9, 4, 7, 6, 3] },
+  { id: 'ingles', n: 'Inglês: phrasal verbs', cards: 120, hoje: 6, est: [2, 50, 68], acc: .91, w: 1.4, start: 0, prev: [6, 6, 7, 12, 8, 5, 10] },
+  { id: 'js', n: 'JavaScript', cards: 64, hoje: 3, est: [0, 26, 38], acc: .88, w: .8, start: 20, prev: [3, 3, 2, 5, 3, 6, 2] },
+  { id: 'historia', n: 'História do Brasil', cards: 35, hoje: 0, est: [0, 23, 12], acc: .94, w: .6, start: 75, prev: [0, 1, 1, 0, 3, 1, 2] },
+];
+// sem nenhum Rating: só Cards novos; a revisão de hoje traz 20 (Novos por dia)
+const DECKS_VAZIO = [
+  { id: 'anatomia', n: 'Anatomia humana', cards: 24, hoje: 12, est: [24, 0, 0] },
+  { id: 'ingles', n: 'Inglês: phrasal verbs', cards: 37, hoje: 8, est: [37, 0, 0] },
+];
+
+function rng(seed) {
+  return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+// st: concluida | vista | livre (nada vencido) | perdida (tinha Cards e não revisou) | hoje (pendente)
+const DAYS = (() => {
+  const r = rng(7), out = [];
+  for (let i = 0; i <= N; i++) {
+    let st;
+    if (i === N) st = 'hoje';
+    else if (i >= N - 12) st = 'concluida';
+    else if (i === N - 13) st = 'perdida';
+    else { const x = r(); st = x < .68 ? 'concluida' : x < .8 ? 'vista' : x < .9 ? 'livre' : 'perdida'; }
+    const rev = {}, err = {};
+    DECKS.forEach((d) => {
+      let v = 0, e = 0;
+      if (i >= d.start && (st === 'concluida' || (st === 'vista' && r() < .3))) {
+        v = Math.max(1, Math.round(9 * d.w * (.5 + r()) * (st === 'vista' ? .3 : 1)));
+        e = Math.min(v, Math.round(v * (1 - d.acc) * (.4 + r() * 1.2)));
+      }
+      rev[d.id] = v; err[d.id] = e;
+    });
+    out.push({ i, date: dateOf(i), st, rev, err });
+  }
+  return out;
+})();
+
+const vazio = () => S.dados === 'vazio';
+const decksAll = () => vazio() ? DECKS_VAZIO : DECKS;
+const decksSel = () => S.deck === 'todos' ? decksAll() : decksAll().filter((d) => d.id === S.deck);
+const deckName = () => S.deck === 'todos' ? 'Todos os Decks' : decksAll().find((d) => d.id === S.deck).n;
+const revOf = (day) => decksSel().reduce((a, d) => a + day.rev[d.id], 0);
+const errOf = (day) => decksSel().reduce((a, d) => a + day.err[d.id], 0);
+const sumDecks = (k) => decksSel().reduce((a, d) => a + d[k], 0);
+
+const periodDays = () => S.periodo === 'tudo' ? DAYS : DAYS.slice(-Number(S.periodo));
+
+// Sequência: Daily Reviews concluídas seguidas; vista e livre não quebram nem somam. Vale para todos os Decks.
+function streaks() {
+  let run = 0, best = 0;
+  DAYS.forEach((d) => { if (d.st === 'concluida') best = Math.max(best, ++run); else if (d.st === 'perdida') run = 0; });
+  return { cur: run, best };
+}
+
+function stats(decks = null) {
+  const days = periodDays();
+  const sel = decks || decksSel();
+  const rev = days.reduce((a, day) => a + sel.reduce((b, d) => b + day.rev[d.id], 0), 0);
+  const err = days.reduce((a, day) => a + sel.reduce((b, d) => b + day.err[d.id], 0), 0);
+  const dias = days.filter((day) => sel.some((d) => day.rev[d.id])).length;
+  return { rev, err, pct: rev ? Math.round(((rev - err) / rev) * 100) : null, dias, total: days.length };
+}
+
+// Evolução: 1 barra por dia (7/30), por semana (90) ou por mês (Tudo)
+function buckets() {
+  const days = periodDays();
+  let groups;
+  if (S.periodo === '7' || S.periodo === '30') groups = days.map((d) => [d]);
+  else if (S.periodo === '90') { groups = []; for (let j = days.length; j > 0; j -= 7) groups.unshift(days.slice(Math.max(0, j - 7), j)); }
+  else { const m = new Map(); days.forEach((d) => { const k = d.date.getFullYear() * 12 + d.date.getMonth(); if (!m.has(k)) m.set(k, []); m.get(k).push(d); }); groups = [...m.values()]; }
+  return groups.map((g) => {
+    const rev = g.reduce((a, d) => a + revOf(d), 0), err = g.reduce((a, d) => a + errOf(d), 0);
+    const a = g[0].date, b = g[g.length - 1].date;
+    const label = S.periodo === 'tudo' ? MES[a.getMonth()] : S.periodo === '7' ? (g[0].i === N ? 'hoje' : SEM[a.getDay()]) : fmt(a);
+    const range = g.length === 1 ? `${SEM[a.getDay()]}, ${fmt(a)}${g[0].i === N ? ' (hoje)' : ''}` : S.periodo === 'tudo' ? `${MES[a.getMonth()]} ${a.getFullYear()}` : `${fmt(a)} – ${fmt(b)}`;
+    return { rev, err, ok: rev - err, pct: rev ? Math.round(((rev - err) / rev) * 100) : null, label, range };
+  });
+}
+
+function nice(v) {
+  if (v <= 0) return 10;
+  const p = 10 ** Math.floor(Math.log10(v));
+  return [1, 2, 2.5, 5, 10].find((x) => x * p >= v) * p;
+}
+
+/* ---------- ícones (traços estilo lucide) ---------- */
+const PATHS = {
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  ok: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+  flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  cal: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  updown: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+};
+const ic = (n, cls = 'h-5 w-5') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${PATHS[n]}</svg>`;
+
+/* ---------- componentes base (da fundação visual) ---------- */
+const BTN_BASE = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-50';
+const BTN_SIZE = { sm: 'h-8 px-3 text-xs', md: 'h-10 px-4 text-sm', lg: 'h-12 px-6 text-base', icon: 'h-10 w-10' };
+const BTN_KIND = {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+  link: 'text-primary underline-offset-4 hover:underline',
+};
+const btn = (kind = 'primary', size = 'md', extra = '') => `${BTN_BASE} ${BTN_SIZE[size]} ${BTN_KIND[kind]} ${extra}`;
+const n = (v) => `<span class="tnum">${v}</span>`;
+const plural = (v, s, p) => `${n(v)} ${v === 1 ? s : p}`;
+
+const NAV = [
+  { id: 'inicio', label: 'Início', icon: 'home' },
+  { id: 'decks', label: 'Decks', icon: 'layers' },
+  { id: 'progresso', label: 'Progresso', icon: 'chart' },
+  { id: 'config', label: 'Configurações', icon: 'sliders' },
+];
+
+// tooltips: cada render registra o conteúdo; o elemento carrega só o índice
+let TIPS = [];
+const tip = (html) => { TIPS.push(html); return `data-tip="${TIPS.length - 1}"`; };
+
+/* ---------- shell (igual ao Início) ---------- */
+function avatarMenu() {
+  if (S.open !== 'avatar') return '';
+  return `
+  <div class="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop">
+    <div class="px-3 py-2"><p class="text-sm font-medium">Ana Souza</p><p class="text-xs text-muted-foreground">ana@exemplo.com</p></div>
+    <div class="my-1 h-px bg-border"></div>
+    <button data-act="nav:config" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('sliders', 'h-4 w-4')}Configurações</button>
+    <button data-ir="auth.html" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('logout', 'h-4 w-4')}Sair</button>
+  </div>`;
+}
+
+const shell = (content, wide = false) => `
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-30 bg-background/90 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:h-20 md:px-6">
+        <h1 class="font-display text-2xl font-semibold md:hidden">${NAV.find((x) => x.id === S.nav).label}</h1>
+        <a class="hidden items-center gap-2 font-display text-2xl font-semibold tracking-tight text-primary md:inline-flex">${daruma()}Daruma</a>
+        <nav class="mx-auto hidden items-center rounded-full bg-muted p-1 text-sm md:flex">
+          ${NAV.map((x) => `<button data-act="nav:${x.id}" class="rounded-full px-4 py-1.5 transition ${x.id === S.nav ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}">${x.label}</button>`).join('')}
+        </nav>
+        <div class="ml-auto flex items-center gap-2 md:ml-0">
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:novo" class="${btn('primary', 'md')}">${ic('plus', 'h-4 w-4')}Novo</button>${cabecalho.novoMenu(ic, S.open === 'novo')}</div>
+          <div class="relative" data-keep>
+            <button data-act="toggle:bell" class="relative grid h-10 w-10 place-items-center rounded-full border bg-card hover:bg-accent" aria-label="Notificações">${ic('bell', 'h-[18px] w-[18px]')}${!S.bellSeen ? '<span class="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-primary ring-2 ring-background"></span>' : ''}</button>${cabecalho.sinoMenu(ic, S.open === 'bell')}
+          </div>
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:avatar" class="grid h-10 w-10 place-items-center rounded-full bg-accent font-display text-sm font-semibold text-accent-foreground">AS</button>${avatarMenu()}</div>
+        </div>
+      </div>
+    </header>
+    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${emailNotice()}${content}</main>
+    <nav class="fixed inset-x-0 bottom-0 z-30 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_hsl(var(--border))] md:hidden">
+      <div class="grid grid-cols-4 pb-1 pt-2">
+        ${NAV.map((x) => `<button data-act="nav:${x.id}" class="flex flex-col items-center gap-1 text-[11px] font-medium ${x.id === S.nav ? 'text-foreground' : 'text-muted-foreground'}"><span class="grid h-8 w-14 place-items-center rounded-full ${x.id === S.nav ? 'bg-primary/15 text-primary' : ''}">${ic(x.icon)}</span>${x.label}</button>`).join('')}
+      </div>
+    </nav>
+    <button data-act="toggle:novo-sheet" class="fixed bottom-24 right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-pop md:hidden">${ic('plus', 'h-5 w-5')}Novo</button>
+  </div>`;
+
+const emailNotice = () => !S.email ? '' : `
+  <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm md:mb-6">
+    <span class="text-warning">${ic('mail', 'h-5 w-5')}</span>
+    <p class="min-w-0 flex-1">Confirme seu e-mail para receber o aviso da revisão de hoje.</p>
+    <button data-act="reenviar" class="font-medium text-warning underline-offset-4 hover:underline">Reenviar</button>
+  </div>`;
+
+/* ---------- filtros ---------- */
+// combobox: botão com o Deck atual; abre lista com busca, % de acertos e "para hoje"
+const semAcento = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function deckOptions(q = '') {
+  const all = { id: 'todos', n: 'Todos os Decks', cards: decksAll().reduce((a, d) => a + d.cards, 0), hoje: decksAll().reduce((a, d) => a + d.hoje, 0) };
+  const rows = [all].concat(decksAll()).filter((r) => !q || r.id === 'todos' || semAcento(r.n).includes(semAcento(q)));
+  if (q && rows.length === 1) return '<p class="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum Deck encontrado.</p>';
+  return rows.map((r, i) => {
+    const on = r.id === S.deck;
+    const p = vazio() ? null : stats(r.id === 'todos' ? DECKS : [r]).pct;
+    return `
+      <button data-act="deck:${r.id}" data-opt role="option" aria-selected="${on}" class="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left hover:bg-accent [&.is-active]:bg-accent ${i === 0 ? 'is-active' : ''}">
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-md ${r.id === 'todos' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}">${ic('layers', 'h-4 w-4')}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm ${on ? 'font-semibold' : 'font-medium'}">${r.n}</span>
+          <span class="block text-xs text-muted-foreground">${n(r.cards)} cards${r.hoje ? ` · ${n(r.hoje)} para hoje` : ''}</span>
+        </span>
+        ${p === null ? '' : `<span class="text-xs text-muted-foreground tnum">${p}%</span>`}
+        <span class="w-4 text-primary">${on ? ic('check', 'h-4 w-4') : ''}</span>
+      </button>`;
+  }).join('');
+}
+const deckCombo = (extra = '') => `
+  <div class="relative ${extra}" data-keep>
+    <button data-act="toggle:deck" aria-haspopup="listbox" aria-expanded="${S.open === 'deck'}" class="flex h-10 w-full items-center gap-2.5 rounded-btn border border-input bg-background pl-1.5 pr-3 text-left text-sm transition hover:bg-accent ${S.open === 'deck' ? 'ring-2 ring-ring/30' : ''}">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md ${S.deck === 'todos' ? 'bg-muted text-muted-foreground' : 'bg-primary/15 text-primary'}">${ic('layers', 'h-3.5 w-3.5')}</span>
+      <span class="min-w-0 flex-1 truncate font-medium">${deckName()}</span>
+      <span class="text-muted-foreground">${ic('updown', 'h-4 w-4')}</span>
+    </button>
+    ${S.open !== 'deck' ? '' : `
+    <div class="absolute left-0 right-0 top-full z-40 mt-2 rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-pop sm:right-auto sm:w-80">
+      <div class="flex items-center gap-2 border-b px-2.5 pb-1.5 text-muted-foreground">
+        ${ic('search', 'h-4 w-4')}
+        <input data-combo type="text" placeholder="Buscar Deck…" aria-label="Buscar Deck" class="h-9 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground">
+      </div>
+      <div data-combo-list role="listbox" class="max-h-72 overflow-y-auto pt-1.5">${deckOptions()}</div>
+    </div>`}
+  </div>`;
+
+const segmentado = (extra = '') => `
+  <div class="inline-flex rounded-full bg-muted p-1 ${extra}" role="tablist" aria-label="Período">
+    ${Object.entries(PERIODOS).map(([k, l]) => `<button data-act="periodo:${k}" class="h-8 flex-1 whitespace-nowrap rounded-full px-3 text-sm transition ${k === S.periodo ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}">${l}</button>`).join('')}
+  </div>`;
+
+/* ---------- blocos ---------- */
+const card = (title, body, cls = '', right = '') => `
+  <section class="rounded-lg border bg-card p-4 shadow-card md:p-5 ${cls}">
+    ${title ? `<div class="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><h2 class="font-display text-base font-semibold">${title}</h2>${right}</div>` : ''}
+    ${body}
+  </section>`;
+
+const legendKey = (cls, t) => `<span class="inline-flex items-center gap-1.5"><span class="${cls}"></span>${t}</span>`;
+
+function evoLegend() {
+  const s = stats();
+  return `<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+    ${legendKey('h-2.5 w-2.5 rounded-[3px] bg-chart-ok', 'Acertos')}
+    ${legendKey('h-2.5 w-2.5 rounded-[3px] bg-chart-err', 'Erros (abaixo do zero)')}
+    <span>· estudado em ${n(s.dias)} de ${n(s.total)} dias</span>
+  </div>`;
+}
+
+// Evolução: painel da % de acertos (com a meta) em cima, barras de revisões embaixo, mesmo eixo de tempo
+function evolucao(barH = 'h-36') {
+  const B = buckets(), cnt = B.length;
+  const max = nice(Math.max(...B.map((b) => b.rev)));
+  const pcts = B.map((b) => b.pct).filter((v) => v !== null);
+  const lo = Math.max(0, Math.min(80, Math.floor((Math.min(...pcts, 100) - 5) / 10) * 10));
+  const y = (p) => ((100 - p) / (100 - lo)) * 100;
+  const x = (i) => ((i + 0.5) / cnt) * 100;
+
+  const segs = []; let cur = [];
+  B.forEach((b, i) => { if (b.pct === null) { if (cur.length) segs.push(cur); cur = []; } else cur.push(`${x(i)},${y(b.pct)}`); });
+  if (cur.length) segs.push(cur);
+  const lines = segs.filter((s) => s.length > 1).map((s) => `<polyline points="${s.join(' ')}" fill="none" stroke="hsl(var(--chart-ok))" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`).join('');
+  const lastIdx = B.map((b) => b.pct !== null).lastIndexOf(true);
+  const dots = B.map((b, i) => b.pct === null || (cnt > 13 && i !== lastIdx && segs.every((s) => s.length > 1)) ? '' :
+    `<span class="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-chart-ok ring-2 ring-card" style="left:${x(i)}%;top:${y(b.pct)}%"></span>`).join('');
+
+  const ax = 'text-[11px] leading-none text-muted-foreground tnum';
+  // acertos sobem do zero, erros descem do zero; um eixo só
+  const pos = nice(Math.max(...B.map((b) => b.ok))), neg = nice(Math.max(1, ...B.map((b) => b.err)));
+  const zero = (pos / (pos + neg)) * 100;
+  const bars = B.map((b) => `
+      <div class="flex h-full flex-1 flex-col items-center px-px">
+        <div class="flex w-full justify-center items-end" style="height:${zero}%"><div class="w-full max-w-[24px] bg-chart-ok" style="height:${(b.ok / pos) * 100}%"></div></div>
+        <div class="flex w-full flex-1 justify-center items-start pt-[2px]"><div class="w-full max-w-[24px] bg-chart-err" style="height:${(b.err / neg) * 100}%"></div></div>
+      </div>`).join('');
+  const axis = `<span class="${ax} absolute right-2 top-0 -translate-y-1/2">${n(pos)}</span><span class="${ax} absolute right-2 -translate-y-1/2" style="top:${zero}%">0</span><span class="${ax} absolute bottom-0 right-2 translate-y-1/2">${n(neg)}</span>`;
+  const gridLines = `<div class="absolute inset-x-0 top-0 h-px bg-border"></div><div class="absolute inset-x-0 h-px bg-muted-foreground/40" style="top:${zero}%"></div><div class="absolute inset-x-0 bottom-0 h-px bg-border"></div>`;
+
+  const show = new Set(cnt <= 7 ? B.map((_, i) => i) : [0, Math.floor((cnt - 1) / 2), cnt - 1]);
+  const hits = B.map((b) => `<div class="h-full flex-1 rounded-sm hover:bg-foreground/[.05]" ${tip(`<p class="font-medium">${b.range}</p><p class="mt-0.5 text-muted-foreground">${b.rev ? `${plural(b.rev, 'revisão', 'revisões')} · ${n(b.ok)} acertos · ${n(b.err)} erros<br>${n(b.pct)}% de acertos` : 'Sem revisões'}</p>`)}></div>`).join('');
+  const grid = (cls) => `<div class="absolute inset-x-0 h-px bg-border ${cls}"></div>`;
+
+  return `
+  <div class="flex">
+    <div class="w-10 shrink-0 pr-2 text-right">
+      <div class="relative h-16"><span class="${ax} absolute right-2 top-0 -translate-y-1/2">100%</span><span class="${ax} absolute bottom-0 right-2 translate-y-1/2">${lo}%</span></div>
+      <div class="h-7"></div>
+      <div class="relative ${barH}">${axis}</div>
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="relative">
+        <div class="relative h-16">
+          ${grid('top-0')}${grid('bottom-0')}
+          <div class="absolute inset-x-0 border-t border-dashed border-muted-foreground/60" style="top:${y(90)}%"></div>
+          <span class="absolute right-0 -translate-y-full bg-card pl-1 text-[11px] text-muted-foreground" style="top:${y(90)}%">meta 90%</span>
+          <svg class="absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>
+          ${dots}
+        </div>
+        <div class="h-7"></div>
+        <div class="relative ${barH}">
+          ${gridLines}
+          <div class="relative flex h-full">${bars}</div>
+        </div>
+        <div class="absolute inset-0 flex">${hits}</div>
+      </div>
+      <div class="relative mt-2 h-3">${B.map((b, i) => !show.has(i) ? '' : `<span class="absolute whitespace-nowrap ${ax} ${cnt > 7 && i === cnt - 1 ? 'right-0' : cnt > 7 && i === 0 ? 'left-0' : '-translate-x-1/2'}" style="${cnt > 7 && (i === 0 || i === cnt - 1) ? '' : `left:${x(i)}%`}">${b.label}</span>`).join('')}</div>
+    </div>
+  </div>
+  <p class="mt-3 text-xs text-muted-foreground">Em cima, a % de acertos. Embaixo, o nº de revisões${S.periodo === '90' ? ' por semana' : S.periodo === 'tudo' ? ' por mês' : ' por dia'}.</p>`;
+}
+
+// calendário de atividade (estilo GitHub); cor = nº de revisões no dia
+const DIA_TXT = { concluida: 'Revisão concluída', vista: 'Marcada como vista', livre: 'Nada para revisar', perdida: 'Não revisou', hoje: 'Revisão de hoje pendente' };
+function calendario(compact = false) {
+  const days = periodDays();
+  const maxv = Math.max(1, ...days.map(revOf));
+  const cls = (d) => {
+    const v = revOf(d);
+    if (d.st === 'hoje') return 'bg-muted ring-2 ring-inset ring-chart-ok/60';
+    if (!v) return d.st === 'vista' ? 'border border-dashed border-muted-foreground/60' : 'bg-muted';
+    const r = v / maxv;
+    return r < .25 ? 'bg-chart-ok/25' : r < .5 ? 'bg-chart-ok/50' : r < .75 ? 'bg-chart-ok/75' : 'bg-chart-ok';
+  };
+  const t = (d) => tip(`<p class="font-medium">${SEM[d.date.getDay()]}, ${fmt(d.date)}</p><p class="mt-0.5 text-muted-foreground">${DIA_TXT[d.st]}${revOf(d) ? ` · ${plural(revOf(d), 'revisão', 'revisões')}` : ''}</p>`);
+
+  let grid;
+  if (S.periodo === '7') {
+    grid = `<div class="flex gap-2">${days.map((d) => `
+      <div class="flex flex-1 flex-col items-center gap-1.5"><div class="h-10 w-full rounded-md ${cls(d)}" ${t(d)}></div><span class="text-[11px] text-muted-foreground">${d.i === N ? 'hoje' : SEM[d.date.getDay()]}</span></div>`).join('')}</div>`;
+  } else {
+    const pad = days[0].date.getDay();
+    const cells = Array(pad).fill(null).concat(days);
+    const cols = Math.ceil(cells.length / 7);
+    const size = S.periodo === '30' ? 22 : !compact ? 13 : cols > 16 ? 8 : 12;
+    const months = Array.from({ length: cols }, (_, c) => {
+      const d = cells[c * 7] || cells.slice(c * 7).find(Boolean);
+      return d && (d.date.getDate() <= 7 || c === 0) ? MES[d.date.getMonth()] : '';
+    });
+    const tmpl = `grid-template-columns:repeat(${cols},${size}px)`;
+    grid = `
+      <div class="no-scrollbar overflow-x-auto" data-scroll-end>
+        <div class="inline-flex gap-2">
+          <div class="grid grid-rows-7 gap-[3px] pt-5 text-[10px] leading-none text-muted-foreground" style="grid-template-rows:repeat(7,${size}px)">
+            ${SEM.map((s, i) => `<span class="flex items-center">${i % 2 ? s : ''}</span>`).join('')}
+          </div>
+          <div>
+            <div class="mb-1.5 grid h-3.5 gap-[3px] text-[10px] leading-none text-muted-foreground" style="${tmpl}">${months.map((m) => `<span class="whitespace-nowrap">${m}</span>`).join('')}</div>
+            <div class="grid grid-flow-col gap-[3px]" style="grid-template-rows:repeat(7,${size}px);grid-auto-columns:${size}px">
+              ${cells.map((d) => d ? `<div class="rounded-[3px] ${cls(d)}" ${t(d)}></div>` : '<div></div>').join('')}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+  return grid + `
+    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      <span class="inline-flex items-center gap-1">Menos ${['bg-muted', 'bg-chart-ok/25', 'bg-chart-ok/50', 'bg-chart-ok/75', 'bg-chart-ok'].map((x) => `<span class="h-3 w-3 rounded-[3px] ${x}"></span>`).join('')} Mais</span>
+      ${legendKey('h-3 w-3 rounded-[3px] border border-dashed border-muted-foreground/60', 'Marcada como vista')}
+    </div>`;
+}
+
+function previsao(h = 'h-32') {
+  const today = new Date(2026, 9, 21).getDay();
+  const vals = [0, 1, 2, 3, 4, 5, 6].map((k) => decksSel().reduce((a, d) => a + d.prev[k], 0));
+  const max = nice(Math.max(...vals));
+  return `
+    <div class="flex ${h} items-end gap-[2px] border-b">
+      ${vals.map((v, k) => `
+        <div class="flex h-full flex-1 flex-col items-center justify-end" ${tip(`<p class="font-medium">${k === 0 ? 'Hoje' : k === 1 ? 'Amanhã' : SEM[(today + k) % 7]}</p><p class="mt-0.5 text-muted-foreground">${plural(v, 'card vence', 'cards vencem')}</p>`)}>
+          <span class="mb-1 text-[11px] font-medium tnum">${v}</span>
+          <div class="w-full max-w-[24px] bg-chart-ok" style="height:${(v / max) * 80}%"></div>
+        </div>`).join('')}
+    </div>
+    <div class="mt-2 flex gap-[2px]">${vals.map((_, k) => `<span class="flex-1 text-center text-[11px] text-muted-foreground">${k === 0 ? 'hoje' : SEM[(today + k) % 7]}</span>`).join('')}</div>`;
+}
+
+const ESTADOS = [
+  { t: 'Novo', cls: 'bg-chart-ok/30', d: 'Nunca recebeu Rating' },
+  { t: 'Em aprendizado', cls: 'bg-chart-ok/60', d: 'Intervalo menor que 21 dias' },
+  { t: 'Maduro', cls: 'bg-chart-ok', d: 'Intervalo de 21 dias ou mais' },
+];
+function estados() {
+  const v = [0, 1, 2].map((k) => decksSel().reduce((a, d) => a + d.est[k], 0));
+  const total = v[0] + v[1] + v[2];
+  const segs = ESTADOS.map((e, k) => ({ ...e, v: v[k] })).filter((e) => e.v);
+  return `
+    <div class="flex h-3 gap-[2px]">
+      ${segs.map((e, k) => `<div class="${e.cls} ${k === 0 ? 'rounded-l-[4px]' : ''} ${k === segs.length - 1 ? 'rounded-r-[4px]' : ''}" style="flex-grow:${e.v}" ${tip(`<p class="font-medium">${e.t}</p><p class="mt-0.5 text-muted-foreground">${plural(e.v, 'card', 'cards')} · ${e.d}</p>`)}></div>`).join('')}
+    </div>
+    <ul class="mt-4 space-y-2 text-sm">
+      ${ESTADOS.map((e, k) => `
+        <li class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-[3px] ${e.cls}"></span><span class="flex-1">${e.t}</span><span class="font-medium tnum">${v[k]}</span><span class="w-10 text-right text-muted-foreground tnum">${Math.round((v[k] / total) * 100)}%</span></li>`).join('')}
+    </ul>`;
+}
+
+// medidor de acertos com a marca da meta
+function meter(pct) {
+  return `
+    <div class="relative mt-3 h-2 rounded-full bg-chart-ok/15">
+      <div class="h-full rounded-full bg-chart-ok" style="width:${pct}%"></div>
+      <div class="absolute -top-1 h-4 w-0.5 rounded-full bg-foreground/70" style="left:90%"></div>
+    </div>`;
+}
+const metaTxt = (pct) => pct >= 90 ? 'Acima da meta de 90%' : `${plural(90 - pct, 'ponto', 'pontos')} abaixo da meta de 90%`;
+
+function porDeck(compact = false) {
+  return `<ul class="-mx-2">${DECKS.map((d) => {
+    const s = stats([d]);
+    return `
+      <li><button data-act="deck:${d.id}" class="flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left hover:bg-accent">
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium">${d.n}</p>
+          <p class="text-xs text-muted-foreground">${d.hoje ? `${n(d.hoje)} para hoje · ` : ''}${n(d.cards)} cards</p>
+        </div>
+        <div class="w-20 shrink-0 text-right">
+          <p class="text-sm font-medium tnum">${s.pct === null ? '—' : s.pct + '%'}</p>
+          <div class="mt-1 h-1.5 rounded-full bg-chart-ok/15"><div class="h-full rounded-full bg-chart-ok" style="width:${s.pct || 0}%"></div></div>
+        </div>
+        ${compact ? '' : `<span class="text-muted-foreground">${ic('right', 'h-4 w-4')}</span>`}
+      </button></li>`;
+  }).join('')}</ul>`;
+}
+
+// últimos 7 dias da Sequência: concluída (cheio), vista (tracejado), sem revisão (cinza), hoje pendente (anel)
+const INICIAL = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+function semana() {
+  return `<div class="flex justify-between gap-1">${DAYS.slice(-7).map((d) => {
+    const cls = d.st === 'concluida' ? 'bg-chart-ok text-white dark:text-background'
+      : d.st === 'hoje' ? 'ring-2 ring-inset ring-chart-ok/60 text-foreground'
+      : d.st === 'vista' ? 'border border-dashed border-muted-foreground/60 text-muted-foreground'
+      : 'bg-muted text-muted-foreground';
+    return `<span class="grid h-8 w-8 place-items-center rounded-full text-[11px] font-medium ${cls}" ${tip(`<p class="font-medium">${d.i === N ? 'Hoje' : `${SEM[d.date.getDay()]}, ${fmt(d.date)}`}</p><p class="mt-0.5 text-muted-foreground">${DIA_TXT[d.st]}</p>`)}>${d.st === 'concluida' ? ic('check', 'h-3.5 w-3.5') : INICIAL[d.date.getDay()]}</span>`;
+  }).join('')}</div>`;
+}
+
+const seqNota = () => S.deck !== 'todos' ? 'A Sequência vale para todos os Decks.' : 'A revisão de hoje ainda conta.';
+
+const periodoTxt = () => S.periodo === 'tudo' ? 'desde o início' : `nos últimos ${PERIODOS[S.periodo]}`;
+
+function deckFiltrado() {
+  const d = decksSel()[0];
+  return `
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+      <p class="text-muted-foreground">${d.hoje ? `${n(d.hoje)} para hoje · ` : ''}${n(d.cards)} cards</p>
+      <button data-act="abrir-deck" class="inline-flex items-center gap-1 font-medium text-primary hover:underline">Abrir Deck ${ic('arrow', 'h-4 w-4')}</button>
+      <button data-act="deck:todos" class="font-medium text-muted-foreground hover:text-foreground">Ver todos os Decks</button>
+    </div>`;
+}
+
+/* ---------- estado vazio (nenhum Rating ainda) ---------- */
+const novosHoje = () => sumDecks('hoje');
+const vazioMsg = (cls = '') => `
+  <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center ${cls}">
+    <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">${ic('chart', 'h-6 w-6')}</span>
+    <div class="min-w-0 flex-1">
+      <p class="font-display text-lg font-semibold">Seu progresso aparece depois da primeira revisão</p>
+      <p class="mt-1 text-sm text-muted-foreground">Estude os Cards de hoje. Depois, aqui você vê a Sequência, os acertos e o que vence nos próximos dias.</p>
+    </div>
+    <button data-act="comecar" class="${btn('primary', 'md', 'w-full sm:w-auto')}">${ic('play', 'h-4 w-4')}Começar revisão de hoje</button>
+  </div>`;
+const fantasma = (t, cls = '') => `
+  <section class="rounded-lg border border-dashed p-4 md:p-5 ${cls}">
+    <p class="text-sm font-medium text-muted-foreground">${t}</p>
+    <p class="mt-2 font-display text-3xl font-semibold text-muted-foreground/50">—</p>
+  </section>`;
+
+/* ---------- carrossel (mobile) ---------- */
+// rolagem com snap, um card por vez na largura toda; arrasta com o dedo ou o mouse; pontos mostram a posição.
+// Cada card tem a altura do próprio conteúdo; a moldura acompanha a altura do card à mostra (ver alturaCarrossel).
+const carrossel = (titulo, items) => `
+  <section>
+    <div class="mb-2.5 flex items-center justify-between">
+      <h2 class="font-display text-base font-semibold">${titulo}</h2>
+      <div class="flex items-center gap-1.5" data-dots>${items.map((_, i) => `<button data-act="slide:${i}" aria-label="Ir para o ${i + 1}º" class="h-1.5 rounded-full transition-all ${i === 0 ? 'w-4 bg-foreground' : 'w-1.5 bg-muted-foreground/40'}"></button>`).join('')}</div>
+    </div>
+    <div data-carousel class="no-scrollbar -mx-5 flex cursor-grab select-none snap-x snap-mandatory scroll-px-5 items-start gap-5 overflow-x-auto overflow-y-hidden px-5 pb-2">
+      ${items.map((it) => `<div class="w-full shrink-0 snap-start">${it}</div>`).join('')}
+    </div>
+  </section>`;
+
+/* ---------- Progresso: Painel ---------- */
+function painel() {
+  const titulo = `
+    <div class="mb-5 flex flex-col gap-3 md:mb-6 md:flex-row md:items-center">
+      <h1 class="hidden font-display text-3xl font-semibold tracking-tight md:block">Progresso</h1>
+      ${vazio() ? '' : `<div class="flex flex-col gap-2 sm:flex-row md:ml-auto">${deckCombo('sm:w-64')}${segmentado('w-full sm:w-auto')}</div>`}
+    </div>`;
+
+  if (vazio()) return titulo + `
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+      ${card('', vazioMsg(), 'col-span-2 md:col-span-3')}
+      ${fantasma('Sequência')}${fantasma('Acertos')}
+      ${card('Cards por estado', estados(), 'col-span-2 md:col-span-1')}
+      ${fantasma('Evolução', 'col-span-2')}${fantasma('Próximos 7 dias', 'col-span-2 md:col-span-1')}
+    </div>`;
+
+  const s = stats(), st = streaks();
+  const seq = `
+    <p class="flex items-center gap-1.5 text-sm text-muted-foreground">${ic('flame', 'h-4 w-4')}Sequência</p>
+    <p class="mt-1 font-display text-4xl font-semibold tracking-tight md:text-5xl">${st.cur} <span class="text-lg font-medium text-muted-foreground md:text-xl">dias</span></p>
+    <p class="mt-1 text-xs text-muted-foreground">Recorde: ${plural(st.best, 'dia', 'dias')}. ${seqNota()}</p>
+    <div class="mt-auto pt-4">${semana()}</div>`;
+  const acc = `
+    <p class="flex items-center gap-1.5 text-sm text-muted-foreground">${ic('target', 'h-4 w-4')}Acertos</p>
+    <p class="mt-1 font-display text-4xl font-semibold tracking-tight md:text-5xl">${s.pct}%</p>
+    <p class="mt-1 text-xs text-muted-foreground">${n(s.rev - s.err)} de ${plural(s.rev, 'revisão', 'revisões')} ${periodoTxt()}</p>
+    <div class="mt-auto pt-4">
+      ${meter(s.pct)}
+      <p class="mt-2 text-xs text-muted-foreground">${metaTxt(s.pct)}</p>
+    </div>`;
+
+  const prevTotal = `<span class="text-xs text-muted-foreground">${plural(decksSel().reduce((a, d) => a + d.prev.reduce((x, y) => x + y, 0), 0), 'card', 'cards')}</span>`;
+  const deckBloco = (cls) => S.deck === 'todos'
+    ? card('Por Deck', porDeck(true), cls, '<span class="text-xs text-muted-foreground">% de acertos</span>')
+    : card(deckName(), deckFiltrado(), cls);
+
+  const mobile = `
+    <div class="space-y-6 md:hidden">
+      ${carrossel('Resumo', [card('', seq, 'flex flex-col'), card('', acc, 'flex flex-col'), card('Cards por estado', estados())])}
+      ${carrossel('Ao longo do tempo', [
+        card('Evolução', `<div class="mb-4">${evoLegend()}</div>${evolucao()}`),
+        card('Próximos 7 dias', previsao('h-48'), '', prevTotal),
+        card('Atividade', calendario(true)),
+      ])}
+      ${deckBloco('')}
+    </div>`;
+
+  const desktop = `
+    <div class="hidden grid-cols-3 gap-4 md:grid">
+      ${card('', seq, 'flex flex-col')}
+      ${card('', acc, 'flex flex-col')}
+      ${card('Cards por estado', estados())}
+      ${card('Evolução', evolucao(), 'col-span-2', evoLegend())}
+      ${card('Próximos 7 dias', previsao('h-[13.5rem]'), '', prevTotal)}
+      ${card('Atividade', calendario(), 'col-span-2')}
+      ${deckBloco('')}
+    </div>`;
+
+  return titulo + mobile + desktop;
+}
+
+/* ---------- outras abas (fora deste ticket) ---------- */
+
+/* ---------- toasts ---------- */
+function toasts() {
+  return `<div class="pointer-events-none fixed inset-x-3 bottom-24 z-[60] flex flex-col gap-2 md:inset-x-auto md:bottom-6 md:right-6 md:w-96" aria-live="polite">
+    ${S.toasts.map((t) => `
+      <div class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-pop">
+        <span class="text-success">${ic('ok', 'h-5 w-5')}</span>
+        <p class="flex-1 text-sm">${t.msg}</p>
+        <button data-act="toast-close:${t.id}" class="text-muted-foreground hover:text-foreground" aria-label="Fechar">${ic('x', 'h-4 w-4')}</button>
+      </div>`).join('')}
+  </div>`;
+}
+function toast(msg) {
+  const id = ++toastId;
+  S.toasts.push({ id, msg });
+  setTimeout(() => { S.toasts = S.toasts.filter((t) => t.id !== id); render(); }, 4000);
+}
+
+/* ---------- barra do protótipo (fora do design) ---------- */
+function switcher() {
+  const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
+  return `
+  <div data-keep class="fixed bottom-[5.5rem] left-3 right-3 z-[100] flex flex-wrap items-center justify-center gap-1 rounded-3xl bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:flex-nowrap md:rounded-full md:px-2 md:py-1.5" style="font-family:system-ui,sans-serif">
+    <select data-sel="dados" class="h-8 rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Dados">
+      <option value="cheio" ${S.dados === 'cheio' ? 'selected' : ''}>Com histórico</option>
+      <option value="vazio" ${S.dados === 'vazio' ? 'selected' : ''}>Sem Ratings</option>
+    </select>
+    <button data-act="tema" class="${b}" aria-label="Trocar tema" title="Tema">${ic(S.tema === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
+    <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+function screen() {
+  TIPS = [];
+  return shell(painel()) + cabecalho.novoSheet(ic, S.open === 'novo-sheet') + toasts();
+}
+
+function render() {
+  document.documentElement.classList.toggle('dark', S.tema === 'escuro');
+  const app = document.getElementById('app');
+  if (S.frame === 'mobile' && !S.embed) {
+    const src = '?' + params({ embed: '1' });
+    const frame = app.querySelector('iframe');
+    if (!frame || frame.dataset.src !== src) app.innerHTML = `
+      <div class="grid min-h-screen place-items-center bg-muted p-6 pb-24">
+        <iframe data-src="${src}" src="${src}" title="Mobile 390px" class="h-[844px] max-h-[calc(100vh-7rem)] w-[390px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-background shadow-2xl"></iframe>
+      </div>`;
+  } else {
+    app.innerHTML = screen();
+    app.querySelectorAll('[data-scroll-end]').forEach((el) => { el.scrollLeft = el.scrollWidth; });
+    app.querySelectorAll('[data-carousel] > *').forEach((el) => alturaObs.observe(el));
+    if (S.open === 'deck' && matchMedia('(min-width: 640px)').matches) app.querySelector('[data-combo]')?.focus({ preventScroll: true });
+  }
+  document.getElementById('switcher').innerHTML = S.embed ? '' : switcher();
+}
+
+/* tooltip: hover no desktop, toque no mobile */
+const tipEl = document.getElementById('tip');
+function showTip(el, x, y) {
+  tipEl.innerHTML = TIPS[el.dataset.tip];
+  tipEl.classList.remove('hidden');
+  const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  tipEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, x - w / 2)) + 'px';
+  tipEl.style.top = (y - h - 12 < 8 ? y + 16 : y - h - 12) + 'px';
+}
+document.addEventListener('mousemove', (e) => {
+  const el = e.target.closest('[data-tip]');
+  if (el) showTip(el, e.clientX, e.clientY); else tipEl.classList.add('hidden');
+});
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-tip]');
+  if (t && !e.target.closest('[data-act]')) { const r = t.getBoundingClientRect(); showTip(t, r.left + r.width / 2, r.top); return; }
+  tipEl.classList.add('hidden');
+  const el = e.target.closest('[data-act]');
+  if (!el) {
+    if (S.open && !e.target.closest('[data-keep]')) { S.open = null; render(); }
+    return;
+  }
+  const [k, arg] = el.dataset.act.split(':');
+  switch (k) {
+    case 'toggle': S.open = S.open === arg ? null : arg; if (arg === 'bell') S.bellSeen = true; break;
+    case 'close': S.open = null; break;
+    case 'nav':
+      if (arg === 'progresso') { S.open = null; break; }
+      return ir({ inicio: 'home.html', decks: 'decks.html', config: 'configuracoes.html' }[arg]);
+    case 'periodo': S.periodo = arg; syncURL(); break;
+    case 'slide': {
+      const car = el.closest('section').querySelector('[data-carousel]');
+      car.scrollTo({ left: car.children[arg].offsetLeft - car.children[0].offsetLeft, behavior: 'smooth' });
+      return;
+    }
+    case 'deck': S.deck = arg; S.open = null; syncURL(); scrollTo({ top: 0, behavior: 'smooth' }); break;
+    case 'comecar': location.href = `study-session.html?origem=revisao&tema=${S.tema}${S.embed ? '&embed=1' : ''}`; return;
+    case 'abrir-deck': return ir(`decks.html?tela=deck&deck=${S.deck}`);
+    case 'reenviar': toast('Enviamos um novo link para ana@exemplo.com.'); break;
+    case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
+    case 'tema': S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; syncURL(); break;
+    case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
+  }
+  render();
+});
+
+document.addEventListener('change', (e) => {
+  const k = e.target.dataset.sel;
+  if (!k) return;
+  S[k] = e.target.value;
+  if (k === 'dados' && !decksAll().some((d) => d.id === S.deck)) S.deck = 'todos';
+  syncURL(); render();
+});
+
+// carrossel: arrastar com o mouse (o toque já rola nativo); solta e encaixa no card mais próximo
+let drag = null, engoleClique = false;
+const passo = (car) => car.children[1] ? car.children[1].offsetLeft - car.children[0].offsetLeft : car.clientWidth;
+document.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse' || e.button !== 0) return;
+  const car = e.target.closest('[data-carousel]');
+  if (!car) return;
+  drag = { car, x: e.clientX, left: car.scrollLeft, moved: false };
+  car.style.scrollSnapType = 'none';
+  car.style.cursor = 'grabbing';
+});
+document.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  if (Math.abs(dx) > 5) drag.moved = true;
+  drag.car.scrollLeft = drag.left - dx;
+});
+document.addEventListener('pointerup', (e) => {
+  if (!drag) return;
+  const { car, x, left, moved } = drag;
+  drag = null;
+  car.style.cursor = '';
+  const dx = e.clientX - x;
+  let idx = Math.round(left / passo(car));
+  if (dx < -40) idx++; else if (dx > 40) idx--;
+  idx = Math.max(0, Math.min(car.children.length - 1, idx));
+  car.scrollTo({ left: idx * passo(car), behavior: 'smooth' });
+  setTimeout(() => { car.style.scrollSnapType = ''; }, 450);
+  if (moved) { engoleClique = true; setTimeout(() => { engoleClique = false; }, 0); }
+});
+// depois de arrastar, o clique não abre tooltip nem aciona botões
+document.addEventListener('click', (e) => {
+  if (engoleClique) { e.stopPropagation(); e.preventDefault(); engoleClique = false; }
+}, true);
+
+// carrossel: a altura vai de um card ao outro conforme a rolagem, sem sobrar espaço embaixo do card mais baixo
+function alturaCarrossel(car) {
+  if (!car.offsetParent) return;
+  const pos = car.scrollLeft / passo(car), i = Math.floor(pos), f = pos - i;
+  const h = (k) => car.children[Math.min(k, car.children.length - 1)].offsetHeight;
+  car.style.height = `${h(i) + (h(i + 1) - h(i)) * f + 8}px`;
+}
+// recalcula quando um card muda de tamanho (fontes e estilos chegam depois do primeiro render)
+const alturaObs = new ResizeObserver((es) => new Set(es.map((e) => e.target.parentElement)).forEach(alturaCarrossel));
+// carrossel: atualiza os pontos e a altura ao rolar
+document.addEventListener('scroll', (e) => {
+  const car = e.target;
+  if (!car.matches || !car.matches('[data-carousel]')) return;
+  alturaCarrossel(car);
+  const idx = Math.round(car.scrollLeft / passo(car));
+  car.closest('section').querySelectorAll('[data-dots] > *').forEach((d, i) => {
+    d.className = `h-1.5 rounded-full transition-all ${i === idx ? 'w-4 bg-foreground' : 'w-1.5 bg-muted-foreground/40'}`;
+  });
+}, true);
+
+// combobox: filtra sem re-renderizar a página (mantém o foco); setas, Enter e Esc
+document.addEventListener('input', (e) => {
+  if (!e.target.matches('[data-combo]')) return;
+  document.querySelector('[data-combo-list]').innerHTML = deckOptions(e.target.value);
+});
+document.addEventListener('keydown', (e) => {
+  if (!e.target.matches || !e.target.matches('[data-combo]')) return;
+  const opts = [...document.querySelectorAll('[data-combo-list] [data-opt]')];
+  let i = opts.findIndex((o) => o.classList.contains('is-active'));
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!opts.length) return;
+    opts[i]?.classList.remove('is-active');
+    i = (i + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+    opts[i].classList.add('is-active');
+    opts[i].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && opts[i]) { e.preventDefault(); opts[i].click(); }
+  else if (e.key === 'Escape') { S.open = null; render(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  const a = document.activeElement;
+  if (a && (a.matches('input, textarea, select') || a.isContentEditable)) return;
+  if (e.key === 'Escape' && S.open) { S.open = null; render(); }
+});
+
+if (!decksAll().some((d) => d.id === S.deck)) S.deck = 'todos';
+syncURL();
+render();
+</script>
+</body>
+</html>

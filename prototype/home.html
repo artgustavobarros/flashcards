@@ -1,0 +1,585 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Home, banner da Daily Review e notificações".
+  Pergunta: como é o Início após o login (banner da Daily Review nos estados do dia, "Marcar como vista",
+  sino com dropdown, Decks recentes e o aviso "Confirme seu e-mail")?
+  Decisão: variante "Faixa" — saudação, faixa compacta da revisão de hoje e Decks recentes em grade.
+  As variantes descartadas estão no branch prototype/home.
+  Parâmetros: ?dia=pendente|andamento|backlog|concluida|vista|livre · ?email=pendente · ?tema=claro|escuro · ?frame=mobile.
+  Ticket "Primeiro acesso e Início sem Decks": ?dados=vazio|primeiro (conta nova · depois do 1º estudo).
+  Decisão: só estados vazios, sem guia nem Deck de exemplo; o Review Time fica no padrão 19:00 com "Mudar".
+  As variantes descartadas (checklist "Primeiros passos", boas-vindas guiada) estão no branch prototype/primeiro-acesso.
+  Base: prototype/fundacao-visual.html (tokens, shell, componentes). Dados falsos, nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Início · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher"></div>
+
+<script>
+/* ---------- estado ---------- */
+const P = new URLSearchParams(location.search);
+const DIAS = { pendente: 'Pendente', andamento: 'Em andamento', backlog: 'Muitos atrasados', concluida: 'Concluída', vista: 'Marcada como vista', livre: 'Nada para hoje' };
+const DADOS = { cheio: 'Com dados', vazio: 'Conta nova', primeiro: 'Depois do 1º estudo' };
+const S = {
+  dia: DIAS[P.get('dia')] ? P.get('dia') : 'pendente',
+  dados: DADOS[P.get('dados')] ? P.get('dados') : 'cheio',
+  hora: '19:00',
+  email: P.get('email') === 'pendente',
+  tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
+  frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
+  embed: P.get('embed') === '1',
+  open: null, nav: 'inicio', bellSeen: false, pausados: P.get('novos') === 'pausados', diaAntes: null, toasts: [],
+};
+let toastId = 0;
+
+function params() {
+  const p = new URLSearchParams({ dia: S.dia, tema: S.tema });
+  if (S.dados !== 'cheio') p.set('dados', S.dados);
+  p.set('email', S.email ? 'pendente' : 'ok');
+  p.set('novos', S.pausados ? 'pausados' : 'ativos');
+  return p;
+}
+function syncURL() {
+  const p = params();
+  if (S.frame === 'mobile') p.set('frame', 'mobile');
+  if (S.embed) p.set('embed', '1');
+  history.replaceState(null, '', '?' + p);
+}
+
+/* ---------- dados falsos ---------- */
+// por Deck: revisões de hoje (inclui atrasados), novos de hoje e já estudados hoje
+function hoje() {
+  const backlog = S.dia === 'backlog';
+  const decks = [
+    { n: 'Anatomia humana', cards: 42, rev: backlog ? 26 : 5, novos: 3, feitos: 0 },
+    { n: 'Inglês: phrasal verbs', cards: 120, rev: backlog ? 38 : 4, novos: 2, feitos: 0 },
+    { n: 'JavaScript', cards: 64, rev: backlog ? 17 : 3, novos: 0, feitos: 0 },
+    { n: 'História do Brasil', cards: 35, rev: 0, novos: 0, feitos: 0 },
+  ];
+  decks.forEach((d) => {
+    if (S.pausados) d.novos = 0;
+    if (S.dia === 'livre') { d.rev = 0; d.novos = 0; }
+    d.total = d.rev + d.novos;
+    if (S.dia === 'concluida') d.feitos = d.total;
+    if (S.dia === 'andamento' && d.n === 'Anatomia humana') d.feitos = 6;
+    d.faltam = d.total - d.feitos;
+  });
+  const sum = (k) => decks.reduce((a, d) => a + d[k], 0);
+  const total = sum('total'), feitos = sum('feitos');
+  return {
+    decks, total, feitos, faltam: total - feitos,
+    rev: sum('rev'), novos: sum('novos'), atr: backlog ? 64 : 4,
+    amanha: S.dia === 'vista' ? 14 + total : 14,
+    aberto: ['pendente', 'andamento', 'backlog'].includes(S.dia),
+  };
+}
+
+/* ---------- ícones (traços estilo lucide) ---------- */
+const PATHS = {
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  ok: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  coffee: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  dots: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+};
+const ic = (n, cls = 'h-5 w-5') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${PATHS[n]}</svg>`;
+
+/* ---------- componentes base (da fundação visual) ---------- */
+const BTN_BASE = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-50';
+const BTN_SIZE = { sm: 'h-8 px-3 text-xs', md: 'h-10 px-4 text-sm', lg: 'h-12 px-6 text-base', icon: 'h-10 w-10' };
+const BTN_KIND = {
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+  link: 'text-primary underline-offset-4 hover:underline',
+};
+const btn = (kind = 'primary', size = 'md', extra = '') => `${BTN_BASE} ${BTN_SIZE[size]} ${BTN_KIND[kind]} ${extra}`;
+const n = (v) => `<span class="font-mono tnum">${v}</span>`;
+const badge = (t, cls) => `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}">${t}</span>`;
+const plural = (v, s, p) => `${n(v)} ${v === 1 ? s : p}`;
+
+const NAV = [
+  { id: 'inicio', label: 'Início', icon: 'home' },
+  { id: 'decks', label: 'Decks', icon: 'layers' },
+  { id: 'progresso', label: 'Progresso', icon: 'chart' },
+  { id: 'config', label: 'Configurações', icon: 'sliders' },
+];
+
+// detalhe da contagem: "12 revisões · 5 novos · 4 atrasados"
+function detalhe(h) {
+  const parts = [plural(h.rev, 'revisão', 'revisões')];
+  if (h.novos) parts.push(plural(h.novos, 'novo', 'novos'));
+  if (h.atr) parts.push(`<span class="text-destructive">${plural(h.atr, 'atrasado', 'atrasados')}</span>`);
+  return parts.join(' · ');
+}
+
+/* ---------- sino ---------- */
+const bellDot = () => S.dados === 'cheio' && hoje().aberto && !S.bellSeen;
+
+function bellMenu() {
+  if (S.open !== 'bell') return '';
+  const h = hoje();
+  let item;
+  if (S.dados !== 'cheio') return `
+  <div class="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-1.5rem)] rounded-lg border bg-popover text-popover-foreground shadow-pop">
+    <div class="border-b px-4 py-3 text-sm font-medium">Notificações</div>
+    <div class="flex gap-3 p-5 text-muted-foreground">
+      <span class="mt-0.5">${ic('bell', 'h-4 w-4')}</span>
+      <div><p class="text-sm font-medium text-foreground">Nada por aqui ainda</p>
+      <p class="text-xs">${S.dados === 'primeiro' ? `Amanhã às ${n(S.hora)}: aviso da revisão de ${n(5)} cards.` : `O aviso da revisão de hoje aparece aqui às ${n(S.hora)}, quando houver Cards.`}</p></div>
+    </div>
+  </div>`;
+  if (h.aberto) item = `
+      <div class="flex gap-3 rounded-md bg-accent/70 p-3">
+        <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"></span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium">Revisão de hoje: ${plural(h.faltam, 'card', 'cards')}${h.feitos ? ' restantes' : ''}</p>
+          <p class="text-xs text-muted-foreground">${detalhe(h)} · às 19:00</p>
+          <div class="mt-3 flex gap-2">
+            <button data-act="comecar" class="${btn('primary', 'sm')}">${h.feitos ? 'Continuar' : 'Começar'}</button>
+            <button data-act="vista" class="${btn('ghost', 'sm')}">Marcar como vista</button>
+          </div>
+        </div>
+      </div>`;
+  else {
+    const [t, d] = {
+      concluida: ['Revisão de hoje concluída', `${plural(h.total, 'card', 'cards')} · às 19:42`],
+      vista: ['Revisão de hoje marcada como vista', `${plural(h.total, 'card fica', 'cards ficam')} para amanhã`],
+      livre: ['Nada para revisar hoje', `Amanhã: ${plural(h.amanha, 'card', 'cards')}`],
+    }[S.dia];
+    item = `
+      <div class="flex gap-3 p-3">
+        <span class="mt-0.5 ${S.dia === 'concluida' ? 'text-success' : 'text-muted-foreground'}">${ic(S.dia === 'concluida' ? 'ok' : S.dia === 'vista' ? 'eye' : 'coffee', 'h-4 w-4')}</span>
+        <div><p class="text-sm font-medium">${t}</p><p class="text-xs text-muted-foreground">${d}</p></div>
+      </div>`;
+  }
+  return `
+  <div class="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-1.5rem)] rounded-lg border bg-popover text-popover-foreground shadow-pop">
+    <div class="border-b px-4 py-3 text-sm font-medium">Notificações</div>
+    <div class="space-y-1 p-2">
+      ${item}
+      <div class="flex gap-3 p-3 text-muted-foreground">
+        <span class="mt-0.5">${ic('ok', 'h-4 w-4')}</span>
+        <div><p class="text-sm">Ontem: revisão concluída</p><p class="text-xs">20 de out.</p></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+const novoItems = () => cabecalho.novoItens(ic);
+const novoMenu = () => S.open !== 'novo' ? '' :
+  `<div class="absolute right-0 top-full z-40 mt-2 w-64 rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop">${novoItems()}</div>`;
+
+function avatarMenu() {
+  if (S.open !== 'avatar') return '';
+  return `
+  <div class="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop">
+    <div class="px-3 py-2"><p class="text-sm font-medium">Ana Souza</p><p class="text-xs text-muted-foreground">ana@exemplo.com</p></div>
+    <div class="my-1 h-px bg-border"></div>
+    <button data-act="nav:config" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('sliders', 'h-4 w-4')}Configurações</button>
+    <button data-ir="auth.html" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent">${ic('logout', 'h-4 w-4')}Sair</button>
+  </div>`;
+}
+
+/* ---------- aviso de e-mail (abaixo do header, em todas as abas) ---------- */
+const emailNotice = () => !S.email ? '' : `
+  <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm md:mb-6">
+    <span class="text-warning">${ic('mail', 'h-5 w-5')}</span>
+    <p class="min-w-0 flex-1">Confirme seu e-mail para receber o aviso da revisão de hoje.</p>
+    <button data-act="reenviar" class="font-medium text-warning underline-offset-4 hover:underline">Reenviar</button>
+  </div>`;
+
+/* ---------- shell ---------- */
+const shell = (content) => `
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-30 bg-background/90 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:h-20 md:px-6">
+        <h1 class="font-display text-2xl font-semibold md:hidden">${NAV.find((x) => x.id === S.nav).label}</h1>
+        <a class="hidden items-center gap-2 font-display text-2xl font-semibold tracking-tight text-primary md:inline-flex">${daruma()}Daruma</a>
+        <nav class="mx-auto hidden items-center rounded-full bg-muted p-1 text-sm md:flex">
+          ${NAV.map((x) => `<button data-act="nav:${x.id}" class="rounded-full px-4 py-1.5 transition ${x.id === S.nav ? 'bg-card font-medium text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}">${x.label}</button>`).join('')}
+        </nav>
+        <div class="ml-auto flex items-center gap-2 md:ml-0">
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:novo" class="${btn('primary', 'md')}">${ic('plus', 'h-4 w-4')}Novo</button>${novoMenu()}</div>
+          <div class="relative" data-keep>
+            <button data-act="toggle:bell" class="relative grid h-10 w-10 place-items-center rounded-full border bg-card hover:bg-accent" aria-label="Notificações">${ic('bell', 'h-[18px] w-[18px]')}${bellDot() ? '<span class="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-primary ring-2 ring-background"></span>' : ''}</button>${bellMenu()}
+          </div>
+          <div class="relative hidden md:block" data-keep><button data-act="toggle:avatar" class="grid h-10 w-10 place-items-center rounded-full bg-accent font-display text-sm font-semibold text-accent-foreground">AS</button>${avatarMenu()}</div>
+        </div>
+      </div>
+    </header>
+    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${emailNotice()}${content}</main>
+    <nav class="fixed inset-x-0 bottom-0 z-30 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_hsl(var(--border))] md:hidden">
+      <div class="grid grid-cols-4 pb-1 pt-2">
+        ${NAV.map((x) => `<button data-act="nav:${x.id}" class="flex flex-col items-center gap-1 text-[11px] font-medium ${x.id === S.nav ? 'text-foreground' : 'text-muted-foreground'}"><span class="grid h-8 w-14 place-items-center rounded-full ${x.id === S.nav ? 'bg-primary/15 text-primary' : ''}">${ic(x.icon)}</span>${x.label}</button>`).join('')}
+      </div>
+    </nav>
+    <button data-act="toggle:novo-sheet" class="fixed bottom-24 right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-pop md:hidden">${ic('plus', 'h-5 w-5')}Novo</button>
+  </div>`;
+
+/* ---------- peças comuns ---------- */
+const saudacao = () => 'Boa tarde, Ana';
+
+// aviso de backlog: sugere pausar Cards novos
+const backlogNote = (h, extra = '') => S.dia !== 'backlog' ? '' : S.pausados ? `
+  <p class="${extra} flex items-center gap-2 text-sm text-muted-foreground">${ic('pause', 'h-4 w-4')}Cards novos pausados até você pôr a revisão em dia. <button data-act="retomar" class="font-medium text-primary hover:underline">Retomar</button></p>` : `
+  <div class="${extra} flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md bg-warning/10 px-3 py-2.5 text-sm">
+    <span class="text-warning">${ic('alert', 'h-4 w-4')}</span>
+    <p class="min-w-0 flex-1">${n(h.atr)} Cards atrasados. Pausar os novos até pôr em dia?</p>
+    <button data-act="pausar" class="font-medium text-warning hover:underline">Pausar novos</button>
+  </div>`;
+
+const vistaExtra = (h) => `<button data-act="comecar" class="font-medium text-primary hover:underline">Revisar mesmo assim</button>`;
+
+const deckIcon = (cls = 'h-9 w-9') => `<span class="grid ${cls} shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">${ic('layers', 'h-4 w-4')}</span>`;
+const deckDue = (d) => !d.total ? '<span class="text-muted-foreground">Em dia</span>'
+  : !d.faltam ? `<span class="inline-flex items-center gap-1 text-success">${ic('check', 'h-3.5 w-3.5')}Feito hoje</span>`
+  : S.dia === 'vista' ? `<span class="text-muted-foreground">${n(d.faltam)} para amanhã</span>`
+  : `${n(d.faltam)} para hoje`;
+
+const secaoTitulo = (t) => `
+  <div class="mb-3 flex items-baseline justify-between gap-3">
+    <h2 class="font-display text-lg font-semibold">${t}</h2>
+    <button data-act="nav:decks" class="text-sm font-medium text-primary hover:underline">Ver todos</button>
+  </div>`;
+
+/* ---------- Início: saudação, faixa da revisão de hoje, Decks recentes ---------- */
+/* ---------- primeiro acesso (ticket "Primeiro acesso e Início sem Decks") ---------- */
+const DECK_1 = { n: 'Anatomia humana', cards: 5, badge: ['5&nbsp;para amanhã', 'bg-muted text-muted-foreground'] };
+const criarDeckBtn = (size = 'md', extra = '') => `<button data-act="criar-deck" class="${btn('primary', size, extra)}">${ic('plus', 'h-4 w-4')}Criar Deck</button>`;
+
+const deckVazio = () => `
+  <div class="flex flex-col items-center rounded-lg border border-dashed px-6 py-12 text-center">
+    <span class="grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">${ic('layers', 'h-6 w-6')}</span>
+    <p class="mt-4 font-medium">Crie seu primeiro Deck</p>
+    <p class="mt-1 max-w-sm text-sm text-muted-foreground">Um Deck junta os Cards de um assunto. Depois de criar, você já começa a escrever os Cards.</p>
+    ${criarDeckBtn('md', 'mt-4')}
+  </div>`;
+
+const gradeNova = (d) => `
+  <section>${secaoTitulo('Decks recentes')}
+    <div class="grid gap-3 sm:grid-cols-2">
+      <button data-act="deck:${d.n}" class="rounded-lg border bg-card p-4 text-left shadow-card transition hover:border-primary/40">
+        <div class="flex items-start gap-3">${deckIcon()}
+          <div class="min-w-0 flex-1"><p class="truncate font-display font-semibold">${d.n}</p><p class="text-sm text-muted-foreground">${n(d.cards)} cards</p></div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-1.5 text-xs">${badge(d.badge[0], d.badge[1])}</div>
+      </button>
+    </div>
+  </section>`;
+
+function inicioNovo() {
+  const um = S.dados === 'primeiro';
+  const sub = um ? `Primeira sessão feita. Amanhã: ${plural(5, 'card', 'cards')}, com aviso às ${n(S.hora)}.`
+    : 'Comece criando um Deck. Os Cards que você escrever nele viram a sua revisão de cada dia.';
+  const horaHint = `<p class="text-sm text-muted-foreground">${ic('clock', 'mr-1.5 inline h-4 w-4 align-[-3px]')}O aviso da revisão chega às ${n(S.hora)}, no app e no e-mail. <button data-act="nav:config" class="font-medium text-primary hover:underline">Mudar</button></p>`;
+  return `
+    <div class="space-y-6 md:space-y-8">
+      <div>
+        <h1 class="font-display text-2xl font-semibold tracking-tight md:text-3xl">${um ? saudacao() : 'Boas-vindas, Ana'}</h1>
+        <p class="mt-1 text-muted-foreground">${sub}</p>
+      </div>
+      ${um ? gradeNova(DECK_1) : deckVazio() + `<div class="mt-4">${horaHint}</div>`}
+    </div>`;
+}
+
+function home() {
+  if (S.dados !== 'cheio') return inicioNovo();
+  const h = hoje();
+  const sub = {
+    pendente: `Você tem ${plural(h.total, 'card', 'cards')} para hoje.`,
+    andamento: `Faltam ${plural(h.faltam, 'card', 'cards')} na revisão de hoje.`,
+    backlog: `Você tem ${plural(h.total, 'card', 'cards')} para hoje.`,
+    concluida: `Revisão de hoje concluída. Amanhã: ${plural(h.amanha, 'card', 'cards')}.`,
+    vista: `Revisão de hoje marcada como vista. ${plural(h.total, 'card fica', 'cards ficam')} para amanhã. ${vistaExtra(h)}`,
+    livre: `Nada para revisar hoje. Amanhã: ${plural(h.amanha, 'card', 'cards')}.`,
+  }[S.dia];
+
+  const faixa = !h.aberto ? '' : `
+    <section class="rounded-lg border border-primary/25 bg-primary/[.06] p-4 md:p-5">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center">
+        <div class="flex min-w-0 flex-1 items-start gap-3">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">${ic('bell', 'h-5 w-5')}</span>
+          <div class="min-w-0">
+            <p class="font-display text-lg font-semibold">Revisão de hoje: ${plural(h.faltam, 'card', 'cards')}${h.feitos ? ' restantes' : ''}</p>
+            <p class="text-sm text-muted-foreground">${detalhe(h)}</p>
+            ${h.feitos ? `<div class="mt-2 flex items-center gap-2"><div class="h-1.5 w-40 overflow-hidden rounded-full bg-primary/15"><div class="h-full rounded-full bg-primary" style="width:${(h.feitos / h.total) * 100}%"></div></div><span class="text-xs text-muted-foreground">${n(h.feitos)}/${n(h.total)}</span></div>` : ''}
+          </div>
+        </div>
+        <div class="flex gap-2 md:shrink-0">
+          <button data-act="vista" class="${btn('ghost', 'md', 'flex-1 md:flex-none')}">Marcar como vista</button>
+          <button data-act="comecar" class="${btn('primary', 'md', 'flex-1 md:flex-none')}">${ic('play', 'h-4 w-4')}${h.feitos ? 'Continuar' : 'Começar'}</button>
+        </div>
+      </div>
+      ${backlogNote(h, 'mt-4')}
+    </section>`;
+
+  const grade = `
+    <div class="grid gap-3 sm:grid-cols-2">
+      ${h.decks.map((d) => `
+        <button data-act="deck:${d.n}" class="rounded-lg border bg-card p-4 text-left shadow-card transition hover:border-primary/40">
+          <div class="flex items-start gap-3">
+            ${deckIcon()}
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-display font-semibold">${d.n}</p>
+              <p class="text-sm text-muted-foreground">${n(d.cards)} cards</p>
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-1.5 text-xs">
+            ${d.faltam && S.dia !== 'vista' ? badge(`${n(d.faltam)}&nbsp;para hoje`, 'bg-warning/15 text-warning') : badge(deckDue(d), 'bg-muted')}
+            ${d.novos && d.faltam && S.dia !== 'vista' ? badge(`${n(Math.min(d.novos, d.faltam))}&nbsp;novos`, 'bg-primary/10 text-primary') : ''}
+          </div>
+        </button>`).join('')}
+    </div>`;
+
+  return `
+    <div class="space-y-6 md:space-y-8">
+      <div>
+        <h1 class="font-display text-2xl font-semibold tracking-tight md:text-3xl">${saudacao()}</h1>
+        <p class="mt-1 text-muted-foreground">${sub}</p>
+      </div>
+      ${faixa}
+      <section>${secaoTitulo('Decks recentes')}${grade}</section>
+    </div>`;
+}
+
+/* ---------- sobreposições e toasts ---------- */
+function overlays() {
+  if (S.open !== 'novo-sheet') return '';
+  return `
+    <div class="fixed inset-0 z-50 md:hidden">
+      <div class="absolute inset-0 bg-black/40" data-act="close"></div>
+      <div data-keep class="absolute inset-x-0 bottom-0 rounded-t-xl bg-popover p-3 pb-8 text-popover-foreground shadow-pop">
+        <div class="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted"></div>
+        <p class="px-3 pb-2 font-display text-lg font-semibold">Criar</p>
+        ${novoItems()}
+      </div>
+    </div>`;
+}
+
+function toasts() {
+  return `<div class="pointer-events-none fixed inset-x-3 bottom-24 z-[60] flex flex-col gap-2 md:inset-x-auto md:bottom-6 md:right-6 md:w-96" aria-live="polite">
+    ${S.toasts.map((t) => `
+      <div class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-pop">
+        <span class="text-success">${ic('ok', 'h-5 w-5')}</span>
+        <p class="flex-1 text-sm">${t.msg}</p>
+        ${t.action ? `<button data-act="toast-act:${t.id}" class="text-sm font-medium text-primary hover:underline">${t.action}</button>` : ''}
+        <button data-act="toast-close:${t.id}" class="text-muted-foreground hover:text-foreground" aria-label="Fechar">${ic('x', 'h-4 w-4')}</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+function toast(msg, action = null, run = null) {
+  const id = ++toastId;
+  S.toasts.push({ id, msg, action, run });
+  setTimeout(() => { S.toasts = S.toasts.filter((t) => t.id !== id); render(); }, 5000);
+}
+
+/* ---------- barra do protótipo (fora do design) ---------- */
+function switcher() {
+  const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
+  return `
+  <div data-keep class="fixed bottom-[5.5rem] left-3 right-3 z-[100] flex flex-wrap items-center justify-center gap-1 rounded-3xl bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:flex-nowrap md:rounded-full md:px-2 md:py-1.5" style="font-family:system-ui,sans-serif">
+    <select data-sel="dados" class="h-8 max-w-[12rem] rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Dados">
+      ${Object.entries(DADOS).map(([k, l]) => `<option value="${k}" ${k === S.dados ? 'selected' : ''}>${l}</option>`).join('')}
+    </select>
+    ${S.dados === 'cheio' ? `<select data-sel="dia" class="h-8 rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Estado do dia">
+      ${Object.entries(DIAS).map(([k, l]) => `<option value="${k}" ${k === S.dia ? 'selected' : ''}>${l}</option>`).join('')}
+    </select>` : ''}
+    <button data-act="email" class="${b} ${S.email ? 'bg-amber-500/30 text-amber-300' : ''}" aria-label="Aviso de e-mail" title="${S.email ? 'E-mail não confirmado' : 'E-mail confirmado'}">${ic('mail', 'h-4 w-4')}</button>
+    <button data-act="tema" class="${b}" aria-label="Trocar tema" title="Tema">${ic(S.tema === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
+    <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+function screen() {
+  const content = home();
+  return shell(content) + overlays() + toasts();
+}
+
+function render() {
+  document.documentElement.classList.toggle('dark', S.tema === 'escuro');
+  const app = document.getElementById('app');
+  if (S.frame === 'mobile' && !S.embed) {
+    const p = params(); p.set('embed', '1');
+    const src = '?' + p;
+    const frame = app.querySelector('iframe');
+    if (!frame || frame.dataset.src !== src) app.innerHTML = `
+      <div class="grid min-h-screen place-items-center bg-muted p-6 pb-24">
+        <iframe data-src="${src}" src="${src}" title="Mobile 390px" class="h-[844px] max-h-[calc(100vh-7rem)] w-[390px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-background shadow-2xl"></iframe>
+      </div>`;
+  } else {
+    app.innerHTML = screen();
+  }
+  document.getElementById('switcher').innerHTML = S.embed ? '' : switcher();
+}
+
+function setDia(d) { S.dia = d; S.pausados = false; S.bellSeen = false; syncURL(); }
+function setDados(dados) { Object.assign(S, { dados, nav: 'inicio', open: null }); syncURL(); }
+// nomes dos Decks em decks.html
+const DECK_ID = { 'Anatomia humana': 'anatomia', 'Inglês: phrasal verbs': 'ingles', 'JavaScript': 'js', 'História do Brasil': 'historia' };
+const irPara = (url) => { location.href = `${url}${url.includes('?') ? '&' : '?'}tema=${S.tema}${S.embed ? '&embed=1' : ''}`; };
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) {
+    if (S.open && !e.target.closest('[data-keep]')) { S.open = null; render(); }
+    return;
+  }
+  const [k, arg] = el.dataset.act.split(':');
+  switch (k) {
+    case 'toggle': S.open = S.open === arg ? null : arg; if (arg === 'bell') S.bellSeen = true; break;
+    case 'close': S.open = null; break;
+    case 'nav':
+      if (arg === 'inicio') { S.open = null; break; }
+      return ir({ decks: 'decks.html', progresso: 'progresso.html', config: 'configuracoes.html' }[arg] + (arg === 'decks' && S.dados === 'vazio' ? '?dados=vazio' : ''));
+    case 'comecar': location.href = `study-session.html?origem=revisao&tema=${S.tema}${S.embed ? '&embed=1' : ''}`; return;
+    case 'criar-deck': irPara('editor-de-card.html?tela=novo-deck'); return;
+    case 'deck': return ir(`decks.html?tela=deck&deck=${DECK_ID[el.dataset.act.slice(5)] || 'anatomia'}`);
+    case 'vista': {
+      const antes = S.dia;
+      S.open = null; setDia('vista');
+      toast('Revisão marcada como vista. Sem avisos até amanhã.', 'Desfazer', () => setDia(antes));
+      break;
+    }
+    case 'pausar': S.pausados = true; syncURL(); toast('Cards novos pausados até você pôr a revisão em dia.'); break;
+    case 'retomar': S.pausados = false; syncURL(); break;
+    case 'reenviar': toast('Enviamos um novo link para ana@exemplo.com.'); break;
+    case 'toast-act': {
+      const t = S.toasts.find((x) => x.id == arg);
+      S.toasts = S.toasts.filter((x) => x.id != arg);
+      if (t && t.run) t.run();
+      break;
+    }
+    case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
+    case 'email': S.email = !S.email; syncURL(); break;
+    case 'tema': S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; syncURL(); break;
+    case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
+  }
+  render();
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.sel === 'dia') { setDia(e.target.value); S.open = null; render(); }
+  if (e.target.dataset.sel === 'dados') { setDados(e.target.value); render(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  const a = document.activeElement;
+  if (a && (a.matches('input, textarea, select') || a.isContentEditable)) return;
+  if (e.key === 'Escape' && S.open) { S.open = null; render(); }
+});
+
+// "Marcar como vista" no sino de outra aba chega aqui com ?vista=1
+if (P.get('vista') === '1' && S.dia === 'vista') toast('Revisão marcada como vista. Sem avisos até amanhã.', 'Desfazer', () => setDia('pendente'));
+syncURL();
+render();
+</script>
+</body>
+</html>

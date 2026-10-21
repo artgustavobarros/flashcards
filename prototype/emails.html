@@ -1,0 +1,360 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "E-mails da Daily Review, confirmação e senha".
+  Pergunta: como são os três e-mails que o app envia (assunto, preheader, conteúdo, CTA e para onde levam)?
+  Decisão: a Daily Review usa "Pergunta" (abre com a pergunta do primeiro Card; o CTA é "Ver a resposta").
+  Confirmação e senha usam "Bilhete" (texto corrido, um botão, o resto é link).
+  As variantes descartadas (e "Resumo", com contagens, lista por Deck e Sequência) estão no branch prototype/emails.
+  A caixa de entrada e o cabeçalho da mensagem são um cliente de e-mail falso, fora do design: servem para ver
+  o assunto e o preheader. O design é o corpo do e-mail, mais assunto e preheader.
+  Parâmetros: ?email=revisao|atrasados|imagem|confirmacao|senha · ?tema=claro|escuro (modo do cliente)
+              · ?frame=mobile (iframe de 390px).
+  Os links abrem a tela real do protótipo em outra aba. Dados iguais aos do Início (home.html).
+  Tokens vêm de prototype/fundacao-visual.html. Nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>E-mails · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  /* Tokens escolhidos (variante B4 · Zinc + verde): neutros do Zinc, verde como cor de ação e de sucesso */
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<body>
+<div id="app"></div>
+<div id="switcher"></div>
+
+<script>
+/* ---------- estado ---------- */
+const P = new URLSearchParams(location.search);
+const EMAILS = {
+  revisao: 'Daily Review',
+  atrasados: 'Daily Review · muitos atrasados',
+  imagem: 'Daily Review · pergunta com imagem',
+  confirmacao: 'Confirmação de conta',
+  senha: 'Redefinição de senha',
+};
+const S = {
+  email: EMAILS[P.get('email')] ? P.get('email') : 'revisao',
+  tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
+  frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
+  embed: P.get('embed') === '1',
+};
+
+function syncURL() {
+  const p = new URLSearchParams({ email: S.email, tema: S.tema });
+  if (S.frame === 'mobile') p.set('frame', 'mobile');
+  if (S.embed) p.set('embed', '1');
+  history.replaceState(null, '', '?' + p);
+}
+
+/* ---------- dados falsos (os mesmos do Início em home.html) ---------- */
+const PESSOA = { nome: 'Ana', email: 'ana@exemplo.com' };
+const HORA = '19:00';
+// por Deck: revisões de hoje (inclui atrasados) e novos de hoje
+const DIA = {
+  revisao: {
+    decks: [
+      { n: 'Anatomia humana', rev: 5, novos: 3 },
+      { n: 'Inglês: phrasal verbs', rev: 4, novos: 2 },
+      { n: 'JavaScript', rev: 3, novos: 0 },
+    ], atr: 4, min: 9,
+  },
+  atrasados: {
+    decks: [
+      { n: 'Anatomia humana', rev: 26, novos: 3 },
+      { n: 'Inglês: phrasal verbs', rev: 38, novos: 2 },
+      { n: 'JavaScript', rev: 17, novos: 0 },
+    ], atr: 64, min: 41,
+  },
+};
+DIA.imagem = DIA.revisao;
+const dia = () => {
+  const d = DIA[S.email];
+  const rev = d.decks.reduce((a, x) => a + x.rev, 0), novos = d.decks.reduce((a, x) => a + x.novos, 0);
+  return { ...d, rev, novos, total: rev + novos };
+};
+// primeiro Card da Study Session da revisão (study-session.html?origem=revisao)
+const PRIMEIRO = { deck: 'Anatomia humana', q: 'Qual músculo é o principal flexor do cotovelo?' };
+// pergunta com imagem ou fórmula: o e-mail mostra só o texto e avisa que há mais no Card
+const PRIMEIRO_IMG = { deck: 'Anatomia humana', q: 'Qual é a parte destacada do fêmur?' };
+
+/* destinos: as telas reais do protótipo, abertas em outra aba para o e-mail ficar à vista */
+const LINK = {
+  comecar: 'study-session.html?origem=revisao',
+  vista: 'home.html?dia=vista&vista=1',
+  horario: 'configuracoes.html',
+  desligar: 'configuracoes.html',
+  confirmar: 'home.html?email=ok',
+  senha: 'auth.html?tela=nova-senha',
+};
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+/* ---------- ícones (Lucide) ---------- */
+const PATHS = {
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  ok: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+};
+const ic = (n, cls = 'h-5 w-5') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${PATHS[n]}</svg>`;
+
+/* ---------- peças do e-mail (largura máx. de 560px, coluna única, como um e-mail real) ---------- */
+const a = (href, txt, cls = '') => `<a href="${href}" target="_blank" rel="noopener" class="${cls}">${txt}</a>`;
+const btn = (href, txt, extra = '') =>
+  a(href, txt, `inline-flex h-11 items-center justify-center rounded-btn bg-primary px-6 text-[15px] font-semibold text-primary-foreground hover:bg-primary/90 ${extra}`);
+const link = (href, txt) => a(href, txt, 'font-medium text-primary underline underline-offset-2');
+const marca = (cls = 'text-primary') => `<span class="inline-flex items-center gap-2 font-display text-xl font-semibold tracking-tight ${cls}">${daruma()}Daruma</span>`;
+const linkCru = (url) => `<p class="mt-5 text-[13px] leading-relaxed text-muted-foreground">Se o botão não funcionar, copie este endereço no navegador:<br><span class="break-all text-foreground/80">${url}</span></p>`;
+
+// rodapé do aviso diário: por que recebeu, mudar horário, desligar
+const rodapeAviso = () => `
+  <p>Você recebe este aviso todo dia às ${HORA}, quando há Cards para revisar e a revisão ainda não foi feita.</p>
+  <p class="mt-2">${a(LINK.horario, 'Mudar horário', 'underline underline-offset-2')} · ${a(LINK.desligar, 'Desligar o aviso por e-mail', 'underline underline-offset-2')}</p>`;
+const rodapeConta = () => `<p>Você recebe este e-mail porque ele está ligado a uma conta do Daruma.</p>`;
+
+/* ---------- conteúdo de cada e-mail por variante ---------- */
+/* cada função devolve { assunto, preheader, corpo } — o corpo já vem com a moldura da variante */
+
+/* Bilhete (confirmação e senha): texto corrido, como uma mensagem pessoal; um botão; o resto é link */
+const A = {
+  moldura: (miolo, rodape) => `
+    <div class="mx-auto max-w-[560px] px-6 py-8 text-[16px] leading-relaxed sm:px-8">
+      ${marca()}
+      <div class="mt-8 space-y-4">${miolo}</div>
+      <div class="mt-10 border-t pt-5 text-[13px] leading-relaxed text-muted-foreground">${rodape}</div>
+    </div>`,
+  confirmacao: () => ({
+    assunto: 'Confirme seu e-mail',
+    preheader: 'Falta um passo para receber o aviso da revisão de cada dia.',
+    corpo: A.moldura(`
+      <p>Oi, ${PESSOA.nome}.</p>
+      <p>Confirme que <b>${PESSOA.email}</b> é seu. Depois disso, o aviso da revisão de cada dia chega por aqui às ${HORA}.</p>
+      <p class="pt-2">${btn(LINK.confirmar, 'Confirmar e-mail')}</p>
+      ${linkCru('https://daruma.app/confirmar/7f3c9a2e…')}
+      <p class="text-[15px] text-muted-foreground">Se você não criou uma conta no Daruma, ignore este e-mail.</p>`,
+      rodapeConta()),
+  }),
+  senha: () => ({
+    assunto: 'Redefinir sua senha',
+    preheader: 'O link vale por 1 hora e só funciona uma vez.',
+    corpo: A.moldura(`
+      <p>Oi, ${PESSOA.nome}.</p>
+      <p>Recebemos um pedido para redefinir a senha da conta <b>${PESSOA.email}</b>.</p>
+      <p class="pt-2">${btn(LINK.senha, 'Criar senha nova')}</p>
+      <p class="text-[15px] text-muted-foreground">O link vale por 1 hora e só funciona uma vez.</p>
+      ${linkCru('https://daruma.app/senha/b81d04c6…')}
+      <p class="text-[15px] text-muted-foreground">Se não foi você, ignore este e-mail. Sua senha continua a mesma.</p>`,
+      rodapeConta()),
+  }),
+};
+
+/* Pergunta (Daily Review): abre com a pergunta do primeiro Card; o CTA é responder, não "revisar" */
+const C = {
+  moldura: (miolo, rodape) => `
+    <div class="mx-auto max-w-[560px] px-5 py-8 text-center sm:px-8">
+      ${marca()}
+      <div class="mt-7">${miolo}</div>
+      <div class="mt-10 text-[12px] leading-relaxed text-muted-foreground">${rodape}</div>
+    </div>`,
+  revisao() {
+    const d = dia(), muitos = S.email === 'atrasados';
+    const card = S.email === 'imagem' ? PRIMEIRO_IMG : PRIMEIRO;
+    return {
+      assunto: `Você lembra? ${card.q}`,
+      preheader: `O primeiro dos ${d.total} cards da revisão de hoje.`,
+      corpo: C.moldura(`
+        <p class="text-[15px] text-muted-foreground">Oi, ${PESSOA.nome}. Você lembra?</p>
+        <div class="mt-4 rounded-2xl border bg-card px-6 py-8 text-left shadow-card">
+          <p class="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">${card.deck}</p>
+          <p class="mt-2 font-display text-2xl font-semibold leading-snug tracking-tight">${card.q}</p>
+          ${card === PRIMEIRO_IMG ? `<p class="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2.5 text-[14px] text-muted-foreground">${ic('eye', 'h-4 w-4')}Este Card tem uma imagem. Abra para ver.</p>` : ''}
+          <div class="mt-6">${btn(LINK.comecar, 'Ver a resposta', 'w-full')}</div>
+        </div>
+        <p class="mt-5 text-[15px]">É o primeiro dos <b>${d.total} cards</b> de hoje${muitos ? `, ${d.atr} deles atrasados` : ''}.</p>
+        <p class="mt-1 text-[14px] text-muted-foreground">Hoje não dá? ${link(LINK.vista, 'Marcar como vista')}</p>
+`,
+        rodapeAviso()),
+    };
+  },
+};
+
+function mensagem() {
+  return S.email === 'confirmacao' ? A.confirmacao() : S.email === 'senha' ? A.senha() : C.revisao();
+}
+
+/* ---------- cliente de e-mail falso (fora do design: só para ver assunto, preheader e corpo) ---------- */
+function cliente() {
+  const m = mensagem();
+  const outros = [
+    { de: 'Banco', as: 'Sua fatura fechou', pre: 'Confira os lançamentos do mês.', h: '14:02' },
+    { de: 'Mariana', as: 'Fotos do fim de semana', pre: 'Separei as melhores, olha só.', h: '11:47' },
+  ];
+  const hora = ['confirmacao', 'senha'].includes(S.email) ? '18:31' : HORA;
+  const linha = (de, as, pre, h, ativo) => `
+    <div class="flex gap-3 border-b px-4 py-3 ${ativo ? 'bg-primary/5' : 'opacity-60'}">
+      <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full ${ativo ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'} font-display text-sm font-semibold">${ativo ? daruma('h-5 w-5') : de[0]}</div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-baseline gap-2"><p class="min-w-0 flex-1 truncate text-sm ${ativo ? 'font-semibold' : ''}">${de}</p><span class="text-xs text-muted-foreground tnum">${h}</span></div>
+        <p class="truncate text-sm ${ativo ? 'font-semibold' : ''}">${as}</p>
+        <p class="truncate text-[13px] text-muted-foreground">${pre}</p>
+      </div>
+    </div>`;
+  return `
+  <div class="min-h-screen bg-muted/50 pb-28">
+    <div class="mx-auto max-w-[760px]">
+      <div class="flex items-center gap-2 px-4 pb-2 pt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">${ic('inbox', 'h-4 w-4')}Caixa de entrada</div>
+      <div class="overflow-hidden border-y bg-background sm:rounded-xl sm:border">
+        ${linha('Daruma', m.assunto, m.preheader, hora, true)}
+        ${outros.map((o) => linha(o.de, o.as, o.pre, o.h, false)).join('')}
+      </div>
+      <div class="mt-4 overflow-hidden border-y bg-background sm:rounded-xl sm:border">
+        <div class="border-b px-5 py-4">
+          <p class="text-lg font-semibold leading-snug">${m.assunto}</p>
+          <p class="mt-1 text-[13px] text-muted-foreground"><b class="font-medium text-foreground">Daruma</b> &lt;aviso@daruma.app&gt; · para ${PESSOA.email} · ${hora}</p>
+        </div>
+        <div class="bg-background">${m.corpo}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- barra do protótipo (fora do design) ---------- */
+function switcher() {
+  const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
+  return `
+  <div class="fixed bottom-3 left-1/2 z-[100] flex -translate-x-1/2 flex-col items-center gap-1.5" style="font-family:system-ui,sans-serif">
+    <p class="hidden rounded-full bg-neutral-900/90 px-3 py-1 text-[11px] text-white/80 md:block">Os links abrem a tela real em outra aba · a caixa de entrada não faz parte do design</p>
+    <div class="flex items-center gap-1 rounded-full bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10">
+      <select data-sel="email" class="h-8 max-w-[8.5rem] rounded-full bg-transparent px-2 hover:bg-white/15 sm:max-w-none" style="color-scheme:dark" aria-label="E-mail">
+        ${Object.entries(EMAILS).map(([k, l]) => `<option value="${k}" ${k === S.email ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+      <button data-act="tema" class="${b}" aria-label="Trocar tema">${ic(S.tema === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
+      <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+function render() {
+  document.documentElement.classList.toggle('dark', S.tema === 'escuro');
+  const app = document.getElementById('app');
+  if (S.frame === 'mobile' && !S.embed) {
+    const src = `?email=${S.email}&tema=${S.tema}&embed=1`;
+    const frame = app.querySelector('iframe');
+    if (!frame || frame.dataset.src !== src) app.innerHTML = `
+      <div class="grid min-h-screen place-items-center bg-muted p-6 pb-28">
+        <iframe data-src="${src}" src="${src}" title="Mobile 390px" class="h-[844px] max-h-[calc(100vh-8rem)] w-[390px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-background shadow-2xl"></iframe>
+      </div>`;
+  } else {
+    app.innerHTML = cliente();
+  }
+  document.getElementById('switcher').innerHTML = S.embed ? '' : switcher();
+  syncURL();
+}
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === 'tema') { S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; render(); }
+  if (act === 'frame') { S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; render(); }
+});
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.sel === 'email') { S.email = e.target.value; render(); }
+});
+
+render();
+</script>
+</body>
+</html>
