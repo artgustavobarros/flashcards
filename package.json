@@ -1,0 +1,17 @@
+{
+  "name": "daruma",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "predev": "pnpm --filter @daruma/shared build",
+    "dev": "pnpm --parallel --filter @daruma/shared --filter @daruma/api --filter @daruma/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down"
+  }
+}

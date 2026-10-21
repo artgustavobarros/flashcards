@@ -4,3 +4,16 @@
 
 # impeccable engine binary (per platform, ~21 MB); recreate with `npx impeccable@4.7.0 install -y --project`
 **/impeccable/scripts/bin/
+
+# Node / build output
+node_modules/
+dist/
+.output/
+.tanstack/
+.nitro/
+*.tsbuildinfo
+
+# Local env files (keep the committed .env.example)
+.env
+.env.*
+!.env.example
