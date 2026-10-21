@@ -1,13 +1,13 @@
 <!doctype html>
 <!--
-  PROTÓTIPO DESCARTÁVEL — ticket "E-mails da Daily Review, confirmação e senha".
-  Pergunta: como são os três e-mails que o app envia (assunto, preheader, conteúdo, CTA e para onde levam)?
+  PROTÓTIPO DESCARTÁVEL — ticket "E-mails da Daily Review, confirmação e senha", revisto em "Login só com Google".
+  Pergunta: como é o e-mail que o app envia (assunto, preheader, conteúdo, CTA e para onde leva)?
   Decisão: a Daily Review usa "Pergunta" (abre com a pergunta do primeiro Card; o CTA é "Ver a resposta").
-  Confirmação e senha usam "Bilhete" (texto corrido, um botão, o resto é link).
+  Com login só pelo Google, os e-mails de confirmação e de senha ("Bilhete") saíram; estão no histórico do git, commit 586ceec.
   As variantes descartadas (e "Resumo", com contagens, lista por Deck e Sequência) estão no branch prototype/emails.
   A caixa de entrada e o cabeçalho da mensagem são um cliente de e-mail falso, fora do design: servem para ver
   o assunto e o preheader. O design é o corpo do e-mail, mais assunto e preheader.
-  Parâmetros: ?email=revisao|atrasados|imagem|confirmacao|senha · ?tema=claro|escuro (modo do cliente)
+  Parâmetros: ?email=revisao|atrasados|imagem · ?tema=claro|escuro (modo do cliente)
               · ?frame=mobile (iframe de 390px).
   Os links abrem a tela real do protótipo em outra aba. Dados iguais aos do Início (home.html).
   Tokens vêm de prototype/fundacao-visual.html. Nada é salvo.
@@ -109,8 +109,6 @@ const EMAILS = {
   revisao: 'Daily Review',
   atrasados: 'Daily Review · muitos atrasados',
   imagem: 'Daily Review · pergunta com imagem',
-  confirmacao: 'Confirmação de conta',
-  senha: 'Redefinição de senha',
 };
 const S = {
   email: EMAILS[P.get('email')] ? P.get('email') : 'revisao',
@@ -163,8 +161,6 @@ const LINK = {
   vista: 'home.html?dia=vista&vista=1',
   horario: 'configuracoes.html',
   desligar: 'configuracoes.html',
-  confirmar: 'home.html?email=ok',
-  senha: 'auth.html?tela=nova-senha',
 };
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
@@ -195,49 +191,14 @@ const btn = (href, txt, extra = '') =>
   a(href, txt, `inline-flex h-11 items-center justify-center rounded-btn bg-primary px-6 text-[15px] font-semibold text-primary-foreground hover:bg-primary/90 ${extra}`);
 const link = (href, txt) => a(href, txt, 'font-medium text-primary underline underline-offset-2');
 const marca = (cls = 'text-primary') => `<span class="inline-flex items-center gap-2 font-display text-xl font-semibold tracking-tight ${cls}">${daruma()}Daruma</span>`;
-const linkCru = (url) => `<p class="mt-5 text-[13px] leading-relaxed text-muted-foreground">Se o botão não funcionar, copie este endereço no navegador:<br><span class="break-all text-foreground/80">${url}</span></p>`;
 
 // rodapé do aviso diário: por que recebeu, mudar horário, desligar
 const rodapeAviso = () => `
   <p>Você recebe este aviso todo dia às ${HORA}, quando há Cards para revisar e a revisão ainda não foi feita.</p>
   <p class="mt-2">${a(LINK.horario, 'Mudar horário', 'underline underline-offset-2')} · ${a(LINK.desligar, 'Desligar o aviso por e-mail', 'underline underline-offset-2')}</p>`;
-const rodapeConta = () => `<p>Você recebe este e-mail porque ele está ligado a uma conta do Daruma.</p>`;
 
 /* ---------- conteúdo de cada e-mail por variante ---------- */
 /* cada função devolve { assunto, preheader, corpo } — o corpo já vem com a moldura da variante */
-
-/* Bilhete (confirmação e senha): texto corrido, como uma mensagem pessoal; um botão; o resto é link */
-const A = {
-  moldura: (miolo, rodape) => `
-    <div class="mx-auto max-w-[560px] px-6 py-8 text-[16px] leading-relaxed sm:px-8">
-      ${marca()}
-      <div class="mt-8 space-y-4">${miolo}</div>
-      <div class="mt-10 border-t pt-5 text-[13px] leading-relaxed text-muted-foreground">${rodape}</div>
-    </div>`,
-  confirmacao: () => ({
-    assunto: 'Confirme seu e-mail',
-    preheader: 'Falta um passo para receber o aviso da revisão de cada dia.',
-    corpo: A.moldura(`
-      <p>Oi, ${PESSOA.nome}.</p>
-      <p>Confirme que <b>${PESSOA.email}</b> é seu. Depois disso, o aviso da revisão de cada dia chega por aqui às ${HORA}.</p>
-      <p class="pt-2">${btn(LINK.confirmar, 'Confirmar e-mail')}</p>
-      ${linkCru('https://daruma.app/confirmar/7f3c9a2e…')}
-      <p class="text-[15px] text-muted-foreground">Se você não criou uma conta no Daruma, ignore este e-mail.</p>`,
-      rodapeConta()),
-  }),
-  senha: () => ({
-    assunto: 'Redefinir sua senha',
-    preheader: 'O link vale por 1 hora e só funciona uma vez.',
-    corpo: A.moldura(`
-      <p>Oi, ${PESSOA.nome}.</p>
-      <p>Recebemos um pedido para redefinir a senha da conta <b>${PESSOA.email}</b>.</p>
-      <p class="pt-2">${btn(LINK.senha, 'Criar senha nova')}</p>
-      <p class="text-[15px] text-muted-foreground">O link vale por 1 hora e só funciona uma vez.</p>
-      ${linkCru('https://daruma.app/senha/b81d04c6…')}
-      <p class="text-[15px] text-muted-foreground">Se não foi você, ignore este e-mail. Sua senha continua a mesma.</p>`,
-      rodapeConta()),
-  }),
-};
 
 /* Pergunta (Daily Review): abre com a pergunta do primeiro Card; o CTA é responder, não "revisar" */
 const C = {
@@ -270,7 +231,7 @@ const C = {
 };
 
 function mensagem() {
-  return S.email === 'confirmacao' ? A.confirmacao() : S.email === 'senha' ? A.senha() : C.revisao();
+  return C.revisao();
 }
 
 /* ---------- cliente de e-mail falso (fora do design: só para ver assunto, preheader e corpo) ---------- */
@@ -280,7 +241,7 @@ function cliente() {
     { de: 'Banco', as: 'Sua fatura fechou', pre: 'Confira os lançamentos do mês.', h: '14:02' },
     { de: 'Mariana', as: 'Fotos do fim de semana', pre: 'Separei as melhores, olha só.', h: '11:47' },
   ];
-  const hora = ['confirmacao', 'senha'].includes(S.email) ? '18:31' : HORA;
+  const hora = HORA;
   const linha = (de, as, pre, h, ativo) => `
     <div class="flex gap-3 border-b px-4 py-3 ${ativo ? 'bg-primary/5' : 'opacity-60'}">
       <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full ${ativo ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'} font-display text-sm font-semibold">${ativo ? daruma('h-5 w-5') : de[0]}</div>
@@ -301,7 +262,7 @@ function cliente() {
       <div class="mt-4 overflow-hidden border-y bg-background sm:rounded-xl sm:border">
         <div class="border-b px-5 py-4">
           <p class="text-lg font-semibold leading-snug">${m.assunto}</p>
-          <p class="mt-1 text-[13px] text-muted-foreground"><b class="font-medium text-foreground">Daruma</b> &lt;aviso@daruma.app&gt; · para ${PESSOA.email} · ${hora}</p>
+          <p class="mt-1 text-[13px] text-muted-foreground"><b class="font-medium text-foreground">Daruma</b> &lt;aviso@daruma.artbarros.tech&gt; · para ${PESSOA.email} · ${hora}</p>
         </div>
         <div class="bg-background">${m.corpo}</div>
       </div>

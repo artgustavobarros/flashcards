@@ -2,10 +2,11 @@
 <!--
   PROTÓTIPO DESCARTÁVEL — ticket "Configurações e Review Time".
   Pergunta: como é a tela de Configurações (Review Time, fuso, Novos por dia e pausa, avisos por e-mail e no app,
-  tema, conta com senha e Google, e-mail não confirmado, Sair)?
+  tema, conta Google, Sair)?
+  Revisto em "Login só com Google": a Conta perde senha, vínculo do Google e e-mail não confirmado.
   Decisão: variante "Lista" — linhas agrupadas por seção; cada valor abre um sheet e salva na hora, com "Desfazer".
   As variantes descartadas (formulário com índice e barra "Salvar", frases com prévia do aviso) estão no branch prototype/configuracoes.
-  Parâmetros: ?conta=senha|google|ambos · ?email=pendente · ?novos=pausados · ?tema=claro|escuro|sistema · ?frame=mobile.
+  Parâmetros: ?novos=pausados · ?tema=claro|escuro|sistema · ?frame=mobile.
   Base: prototype/fundacao-visual.html. Dados falsos, nada é salvo.
 -->
 <html lang="pt-BR">
@@ -100,7 +101,6 @@
 <script>
 /* ---------- estado ---------- */
 const P = new URLSearchParams(location.search);
-const CONTAS = { senha: 'Conta com senha', google: 'Conta Google', ambos: 'Senha + Google' };
 const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
 const CFG0 = {
   hora: '19:00', fusoAuto: true, fuso: 'America/Sao_Paulo', novos: 20,
@@ -109,8 +109,6 @@ const CFG0 = {
   nome: 'Ana Souza',
 };
 const S = {
-  conta: CONTAS[P.get('conta')] ? P.get('conta') : 'senha',
-  email: P.get('email') === 'pendente',
   pausados: P.get('novos') === 'pausados',
   frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
   embed: P.get('embed') === '1', bellSeen: false,
@@ -119,14 +117,10 @@ const S = {
 };
 let toastId = 0;
 
-const temSenha = () => S.conta !== 'google';
-const temGoogle = () => S.conta !== 'senha';
-const emailPend = () => S.email && S.conta !== 'google'; // conta Google já chega confirmada
 const temaEfetivo = () => S.draft.tema === 'sistema' ? (prefersDark ? 'escuro' : 'claro') : S.draft.tema;
 
 function syncURL() {
-  const p = new URLSearchParams({ conta: S.conta, tema: S.draft.tema });
-  p.set('email', S.email ? 'pendente' : 'ok');
+  const p = new URLSearchParams({ tema: S.draft.tema });
   p.set('novos', S.pausados ? 'pausados' : 'ativos');
   if (S.frame === 'mobile') p.set('frame', 'mobile');
   if (S.embed) p.set('embed', '1');
@@ -168,7 +162,6 @@ const PATHS = {
   sparkles: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
   pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
   user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
   palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.56-2.5 5.56-5.55C21.97 6.01 17.46 2 12 2z"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
   left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>',
@@ -231,14 +224,6 @@ function avatarMenu() {
   </div>`;
 }
 
-/* ---------- aviso de e-mail (abaixo do header, em todas as abas) ---------- */
-const emailNotice = () => !emailPend() ? '' : `
-  <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm md:mb-6">
-    <span class="text-warning">${ic('mail', 'h-5 w-5')}</span>
-    <p class="min-w-0 flex-1">Confirme seu e-mail para receber o aviso da revisão de hoje.</p>
-    <button data-act="reenviar" class="font-medium text-warning underline-offset-4 hover:underline">Reenviar</button>
-  </div>`;
-
 /* ---------- shell ---------- */
 const shell = (content, fab = true) => `
   <div class="min-h-screen">
@@ -258,7 +243,7 @@ const shell = (content, fab = true) => `
         </div>
       </div>
     </header>
-    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${emailNotice()}${content}</main>
+    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${content}</main>
     <nav class="fixed inset-x-0 bottom-0 z-30 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_hsl(var(--border))] md:hidden">
       <div class="grid grid-cols-4 pb-1 pt-2">
         ${NAV.map((x) => `<button data-act="nav:${x.id}" class="flex flex-col items-center gap-1 text-[11px] font-medium ${x.id === 'config' ? 'text-foreground' : 'text-muted-foreground'}"><span class="grid h-8 w-14 place-items-center rounded-full ${x.id === 'config' ? 'bg-primary/15 text-primary' : ''}">${ic(x.icon)}</span>${x.label}</button>`).join('')}
@@ -275,9 +260,7 @@ const pausaNota = (extra = '') => !S.pausados ? '' : `
     <p class="min-w-0 flex-1">Novos pausados até você pôr a revisão em dia (${n(ATRASADOS)} atrasados). O limite volta a valer depois.</p>
     <button data-act="retomar" class="font-medium text-warning hover:underline">Retomar</button>
   </div>`;
-const emailOff = () => emailPend() ? `Confirme seu e-mail para ligar. <button data-act="reenviar" class="font-medium text-primary hover:underline">Reenviar link</button>` : '';
 const contaEmail = () => `ana@exemplo.com`;
-const googleNote = () => S.conta === 'google' ? 'Crie uma senha antes de desvincular.' : '';
 const avatar = (cls = 'h-12 w-12 text-base') => `<span class="grid ${cls} shrink-0 place-items-center rounded-full bg-accent font-display font-semibold text-accent-foreground">AS</span>`;
 
 /* ---------- Configurações: linhas agrupadas por seção; cada valor abre um sheet ---------- */
@@ -312,27 +295,21 @@ function configuracoes() {
       linha('sparkles', 'Novos por dia', S.pausados ? `<span class="text-warning">Pausados</span>` : n(c.novos), 'novos', 'Cards novos na revisão de cada dia'))}
     ${S.pausados ? pausaNota('-mt-4') : ''}
     ${grupo('Notificações',
-      linhaSw('mail', 'Aviso por e-mail', emailPend() ? emailOff() : `Às ${n(c.hora)}, para ${contaEmail()}`, 'emailOn', c.emailOn && !emailPend(), emailPend()) +
+      linhaSw('mail', 'Aviso por e-mail', `Às ${n(c.hora)}, para ${contaEmail()}`, 'emailOn', c.emailOn) +
       linhaSw('bell', 'Aviso no app', `Ponto no sino às ${n(c.hora)}. A faixa do Início aparece sempre.`, 'appOn', c.appOn))}
     ${grupo('Aparência', linha('palette', 'Tema', TEMAS[c.tema], 'tema'))}
     ${grupo('Conta', `
       <button data-act="modal" data-m="nome" class="flex w-full items-center gap-3 px-4 py-4 text-left hover:bg-accent/60">
         ${avatar()}
         <span class="min-w-0 flex-1"><span class="block font-medium">${S.cfg.nome}</span><span class="block truncate text-sm text-muted-foreground">${contaEmail()}</span></span>
-        ${emailPend() ? badge('Não confirmado', 'bg-warning/15 text-warning') : ''}
         <span class="text-muted-foreground">${ic('right', 'h-4 w-4')}</span>
       </button>
-      ${emailPend() ? `<div class="flex items-center gap-3 bg-warning/5 px-4 py-3 text-sm"><span class="min-w-0 flex-1 text-muted-foreground">Enviamos um link para ${contaEmail()}.</span><button data-act="reenviar" class="font-medium text-primary hover:underline">Reenviar</button></div>` : ''}
-      ${linha('key', temSenha() ? 'Trocar senha' : 'Criar senha', '', 'senha', temSenha() ? '' : 'Para entrar também com e-mail e senha')}
       <div class="flex items-center gap-3 px-4 py-3.5">
         <span class="text-muted-foreground">${ic('google', 'h-[18px] w-[18px]')}</span>
-        <span class="min-w-0 flex-1"><span class="block text-sm font-medium">Google</span><span class="block text-xs text-muted-foreground">${temGoogle() ? `Vinculado · ${contaEmail()}${googleNote() ? ` · ${googleNote()}` : ''}` : 'Entre com um toque'}</span></span>
-        ${temGoogle()
-          ? `<button data-act="desvincular" class="${btn('outline', 'sm')}" ${S.conta === 'google' ? 'disabled' : ''}>Desvincular</button>`
-          : `<button data-act="vincular" class="${btn('outline', 'sm')}">Vincular</button>`}
+        <span class="min-w-0 flex-1"><span class="block text-sm font-medium">Google</span><span class="block truncate text-xs text-muted-foreground">Você entra com ${contaEmail()}</span></span>
       </div>
       <button data-act="sair" class="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-medium text-destructive hover:bg-destructive/5">${ic('logout', 'h-[18px] w-[18px]')}Sair</button>`)}
-    <div class="text-center"><button data-act="modal" data-m="apagar" class="text-sm text-muted-foreground hover:text-destructive hover:underline">Apagar conta</button></div>
+    <div class="flex items-center justify-center gap-3 text-sm text-muted-foreground"><a href="privacidade.html" data-ir="privacidade.html" class="hover:text-foreground hover:underline">Termos e privacidade</a><span aria-hidden="true">·</span><button data-act="modal" data-m="apagar" class="hover:text-destructive hover:underline">Apagar conta</button></div>
   </div>`;
 }
 
@@ -378,16 +355,6 @@ function modal() {
       <p class="mt-4 text-sm font-medium">E-mail</p>
       <p class="text-sm text-muted-foreground">${contaEmail()} · não dá para trocar por aqui.</p>
       ${footer('Salvar')}`,
-    senha: () => `
-      <h3 class="font-display text-lg font-semibold">${temSenha() ? 'Trocar senha' : 'Criar senha'}</h3>
-      ${temSenha() ? '' : '<p class="mt-1 text-sm text-muted-foreground">Depois você pode entrar com e-mail e senha, além do Google.</p>'}
-      <div class="mt-4 space-y-3">
-        ${temSenha() ? `<label class="block text-sm font-medium">Senha atual<input type="password" autocomplete="current-password" class="${INPUT} mt-1.5"></label>` : ''}
-        <label class="block text-sm font-medium">Senha nova<input id="m-senha" type="password" autocomplete="new-password" class="${INPUT} mt-1.5 ${m.err ? 'border-destructive' : ''}"></label>
-        <p class="text-xs ${m.err ? 'text-destructive' : 'text-muted-foreground'}">${m.err || 'Pelo menos 8 caracteres.'}</p>
-        ${temSenha() ? '<a href="auth.html?tela=esqueci" class="inline-block text-sm font-medium text-primary hover:underline">Esqueci a senha atual</a>' : ''}
-      </div>
-      ${footer(temSenha() ? 'Trocar senha' : 'Criar senha')}`,
     apagar: () => `
       <h3 class="font-display text-lg font-semibold">Apagar sua conta?</h3>
       <p class="mt-2 text-sm text-muted-foreground">Seus Decks, Cards, Labels, Comments e o histórico de Ratings somem para sempre. Não dá para desfazer.</p>
@@ -443,10 +410,6 @@ function switcher() {
   const b = 'grid h-8 w-8 place-items-center rounded-full hover:bg-white/15';
   return `
   <div data-keep class="fixed bottom-[5.5rem] left-3 right-3 z-[100] flex flex-wrap items-center justify-center gap-1 rounded-3xl bg-neutral-900 px-1.5 py-1 text-sm text-white shadow-2xl ring-1 ring-white/10 md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:flex-nowrap md:rounded-full md:px-2 md:py-1.5" style="font-family:system-ui,sans-serif">
-    <select data-sel="conta" class="h-8 rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Tipo de conta">
-      ${Object.entries(CONTAS).map(([k, l]) => `<option value="${k}" ${k === S.conta ? 'selected' : ''}>${l}</option>`).join('')}
-    </select>
-    <button data-act="proto-email" class="${b} ${emailPend() ? 'bg-amber-500/30 text-amber-300' : ''}" title="${emailPend() ? 'E-mail não confirmado' : 'E-mail confirmado'}" aria-label="E-mail confirmado ou não">${ic('mail', 'h-4 w-4')}</button>
     <button data-act="proto-pausa" class="${b} ${S.pausados ? 'bg-amber-500/30 text-amber-300' : ''}" title="${S.pausados ? 'Novos pausados' : 'Novos ativos'}" aria-label="Novos pausados ou não">${ic('pause', 'h-4 w-4')}</button>
     <button data-act="proto-tema" class="${b}" aria-label="Trocar tema" title="Tema">${ic(temaEfetivo() === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
     <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
@@ -462,8 +425,7 @@ function render() {
   document.documentElement.classList.toggle('dark', temaEfetivo() === 'escuro');
   const app = document.getElementById('app');
   if (S.frame === 'mobile' && !S.embed) {
-    const p = new URLSearchParams({ conta: S.conta, tema: S.draft.tema, embed: '1' });
-    if (S.email) p.set('email', 'pendente');
+    const p = new URLSearchParams({ tema: S.draft.tema, embed: '1' });
     if (S.pausados) p.set('novos', 'pausados');
     const src = '?' + p;
     const frame = app.querySelector('iframe');
@@ -513,20 +475,10 @@ document.addEventListener('click', (e) => {
       else if (m.kind === 'fuso') { S.modal = null; S.draft.fusoAuto = m.auto; edit('fuso', m.v); }
       else if (m.kind === 'novos') { S.modal = null; edit('novos', m.v); }
       else if (m.kind === 'nome') { const v = document.getElementById('m-nome').value.trim(); S.modal = null; if (v) { S.draft.nome = v; S.cfg.nome = v; toast('Nome salvo.'); } }
-      else if (m.kind === 'senha') {
-        const v = document.getElementById('m-senha').value;
-        if (v.length < 8) { m.err = 'Use pelo menos 8 caracteres.'; break; }
-        S.modal = null;
-        if (S.conta === 'google') { S.conta = 'ambos'; syncURL(); toast('Senha criada. Agora você entra também com e-mail.'); }
-        else toast('Senha alterada.');
-      }
       else if (m.kind === 'apagar') { S.modal = null; location.href = 'auth.html'; return; }
       break;
     }
     case 'retomar': S.pausados = false; syncURL(); toast('Cards novos retomados. Até ' + S.cfg.novos + ' por dia.'); break;
-    case 'reenviar': toast('Enviamos um novo link para ana@exemplo.com.'); break;
-    case 'vincular': S.conta = 'ambos'; syncURL(); toast('Conta Google vinculada.'); break;
-    case 'desvincular': S.conta = 'senha'; syncURL(); toast('Conta Google desvinculada.', 'Desfazer', () => { S.conta = 'ambos'; syncURL(); }); break;
     case 'sair': location.href = 'auth.html'; return;
     case 'toast-act': {
       const t = S.toasts.find((x) => x.id == arg);
@@ -535,7 +487,6 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
-    case 'proto-email': S.email = !S.email; syncURL(); break;
     case 'proto-pausa': S.pausados = !S.pausados; syncURL(); break;
     case 'proto-tema': {
       const t = temaEfetivo() === 'escuro' ? 'claro' : 'escuro';
@@ -545,10 +496,6 @@ document.addEventListener('click', (e) => {
     case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
   }
   render();
-});
-
-document.addEventListener('change', (e) => {
-  if (e.target.dataset.sel === 'conta') { S.conta = e.target.value; syncURL(); render(); }
 });
 
 document.addEventListener('keydown', (e) => {

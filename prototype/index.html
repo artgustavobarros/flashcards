@@ -92,21 +92,17 @@
 <body>
 <div id="app"></div>
 <script>
-// o mapa começa cada visita com a conta confirmada: cada link mostra só o estado que ele nomeia
-try { sessionStorage.removeItem('daruma:email'); } catch {}
 const P = new URLSearchParams(location.search);
 const S = { tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro') };
 
 // [título, descrição, página, [[estado, parâmetros], ...]]
 const TELAS = [
-  ['Login e cadastro', 'E-mail primeiro, Google, cadastro com nome, senha esquecida.', 'auth.html', [
-    ['Entrar', ''], ['Senha errada', 'tela=login-erro'], ['Conta do Google', 'tela=conta-google'], ['Google falhou', 'tela=google-erro'],
-    ['Sessão expirada', 'tela=sessao-expirada'], ['Criar conta', 'tela=cadastro'], ['Criar conta · erros', 'tela=cadastro-erro'],
-    ['Esqueci a senha', 'tela=esqueci'], ['Link enviado', 'tela=enviado'], ['Nova senha', 'tela=nova-senha'], ['Link expirado', 'tela=link-expirado'],
+  ['Login', 'Só com Google; na primeira vez a conta é criada na hora.', 'auth.html', [
+    ['Entrar', ''], ['Primeira vez', 'tela=primeira-vez'], ['Google falhou', 'tela=google-erro'], ['Sessão expirada', 'tela=sessao-expirada'],
   ]],
   ['Início', 'Saudação, faixa da revisão de hoje, Decks recentes e o sino.', 'home.html', [
     ['Revisão pendente', ''], ['Em andamento', 'dia=andamento'], ['Muitos atrasados', 'dia=backlog'], ['Concluída', 'dia=concluida'],
-    ['Marcada como vista', 'dia=vista'], ['Nada para hoje', 'dia=livre'], ['Conta nova', 'dados=vazio&email=pendente'], ['Depois do 1º estudo', 'dados=primeiro'],
+    ['Marcada como vista', 'dia=vista'], ['Nada para hoje', 'dia=livre'], ['Conta nova', 'dados=vazio'], ['Depois do 1º estudo', 'dados=primeiro'],
   ]],
   ['Decks, Cards e Labels', 'Cada nível é uma página: Decks → Deck → Card, com Comments no fim do Card.', 'decks.html', [
     ['Lista de Decks', ''], ['Aba Cards', 'tela=cards'], ['Busca “braquial”', 'tela=cards&q=braquial'], ['Detalhe do Deck', 'tela=deck&deck=anatomia'],
@@ -124,10 +120,13 @@ const TELAS = [
     ['Todos os Decks', ''], ['Só Anatomia humana', 'deck=anatomia'], ['Últimos 7 dias', 'periodo=7'], ['Sem Ratings ainda', 'dados=vazio'],
   ]],
   ['Configurações', 'Estudo, Notificações, Aparência e Conta. Cada valor abre um sheet.', 'configuracoes.html', [
-    ['Conta com senha', ''], ['Conta Google', 'conta=google'], ['Senha + Google', 'conta=ambos'], ['E-mail não confirmado', 'email=pendente'], ['Novos pausados', 'novos=pausados'],
+    ['Configurações', ''], ['Novos pausados', 'novos=pausados'],
   ]],
-  ['E-mails', 'Daily Review, confirmação de conta e redefinição de senha.', 'emails.html', [
-    ['Daily Review', ''], ['Muitos atrasados', 'email=atrasados'], ['Pergunta com imagem', 'email=imagem'], ['Confirmação de conta', 'email=confirmacao'], ['Redefinição de senha', 'email=senha'],
+  ['E-mail', 'Aviso da Daily Review.', 'emails.html', [
+    ['Daily Review', ''], ['Muitos atrasados', 'email=atrasados'], ['Pergunta com imagem', 'email=imagem'],
+  ]],
+  ['Termos e privacidade', 'Página pública, linkada do Login e de Configurações.', 'privacidade.html', [
+    ['Página', ''],
   ]],
   ['Fundação visual', 'Tokens, componentes base e as telas de erro.', 'fundacao-visual.html', [
     ['Catálogo', ''], ['404 logado', 'tela=404'], ['404 deslogado', 'tela=404-deslogado'], ['Erro genérico', 'tela=erro'],

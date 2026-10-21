@@ -3,7 +3,7 @@
   Peças comuns a todas as páginas do protótipo:
   - daruma(cls): o ícone (silhueta verde, rosto recortado, um olho pintado) para pôr ao lado do wordmark;
   - favicon com o mesmo ícone;
-  - tema e aviso "Confirme seu e-mail" que seguem de uma página para outra (sessionStorage, só nesta aba);
+  - tema e pausa dos novos que seguem de uma página para outra (sessionStorage, só nesta aba);
   - barra "Protótipo" recolhida num botão no canto, com link para o mapa (index.html).
   Carregar no <head>, antes do script da página: ele ajusta a URL antes de a página lê-la.
 */
@@ -40,15 +40,12 @@
   /* ---------- estado que segue entre páginas ---------- */
   // tema: claro|escuro guardado a cada mudança de URL; "sistema" não se guarda (cada página segue o sistema)
   // novos: pausados no Início ("Pausar novos") ou em Configurações; ?novos=ativos desfaz
-  // conta: "Confirme seu e-mail" (?email=pendente liga, ?email=ok desliga). Em e-mails e no Login, ?email é outra coisa.
   const usaConta = !['emails.html', 'auth.html', 'index.html'].includes(pagina);
   const lembrar = (search) => {
     const p = new URLSearchParams(search);
     const t = p.get('tema');
     if (t === 'claro' || t === 'escuro') store.set('daruma:tema', t);
     if (t === 'sistema') store.set('daruma:tema', null);
-    if (usaConta && p.get('email') === 'pendente') store.set('daruma:email', 'pendente');
-    if (usaConta && p.get('email') === 'ok') store.set('daruma:email', null);
     if (p.get('novos') === 'pausados') store.set('daruma:novos', 'pausados');
     if (p.get('novos') === 'ativos') store.set('daruma:novos', null);
   };
@@ -56,9 +53,8 @@
   const faltam = new URLSearchParams(location.search);
   let mudou = false;
   if (!faltam.get('tema') && store.get('daruma:tema')) { faltam.set('tema', store.get('daruma:tema')); mudou = true; }
-  if (usaConta && !faltam.get('email') && store.get('daruma:email')) { faltam.set('email', 'pendente'); mudou = true; }
   if (usaConta && !faltam.get('novos') && store.get('daruma:novos')) { faltam.set('novos', 'pausados'); mudou = true; }
-  if (mudou) history.replaceState(null, '', '?' + faltam);
+  if (mudou) history.replaceState(null, '', '?' + faltam + location.hash);
   const replace = history.replaceState.bind(history);
   history.replaceState = (s, t, url) => { if (url) lembrar(String(url).split('?')[1] || ''); return replace(s, t, url); };
 

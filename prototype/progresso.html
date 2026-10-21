@@ -115,7 +115,7 @@ const S = {
   tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
   frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
   embed: P.get('embed') === '1',
-  email: P.get('email') === 'pendente', bellSeen: false,
+  bellSeen: false,
   open: P.get('abrir') === 'deck' ? 'deck' : null, nav: 'progresso', toasts: [],
 };
 let toastId = 0;
@@ -127,7 +127,6 @@ function params(extra = {}) {
 }
 function syncURL() {
   const p = params();
-  if (S.email) p.set('email', 'pendente');
   if (S.frame === 'mobile') p.set('frame', 'mobile');
   if (S.embed) p.set('embed', '1');
   history.replaceState(null, '', '?' + p);
@@ -314,20 +313,13 @@ const shell = (content, wide = false) => `
         </div>
       </div>
     </header>
-    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${emailNotice()}${content}</main>
+    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${content}</main>
     <nav class="fixed inset-x-0 bottom-0 z-30 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_hsl(var(--border))] md:hidden">
       <div class="grid grid-cols-4 pb-1 pt-2">
         ${NAV.map((x) => `<button data-act="nav:${x.id}" class="flex flex-col items-center gap-1 text-[11px] font-medium ${x.id === S.nav ? 'text-foreground' : 'text-muted-foreground'}"><span class="grid h-8 w-14 place-items-center rounded-full ${x.id === S.nav ? 'bg-primary/15 text-primary' : ''}">${ic(x.icon)}</span>${x.label}</button>`).join('')}
       </div>
     </nav>
     <button data-act="toggle:novo-sheet" class="fixed bottom-24 right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-pop md:hidden">${ic('plus', 'h-5 w-5')}Novo</button>
-  </div>`;
-
-const emailNotice = () => !S.email ? '' : `
-  <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm md:mb-6">
-    <span class="text-warning">${ic('mail', 'h-5 w-5')}</span>
-    <p class="min-w-0 flex-1">Confirme seu e-mail para receber o aviso da revisão de hoje.</p>
-    <button data-act="reenviar" class="font-medium text-warning underline-offset-4 hover:underline">Reenviar</button>
   </div>`;
 
 /* ---------- filtros ---------- */
@@ -781,7 +773,6 @@ document.addEventListener('click', (e) => {
     case 'deck': S.deck = arg; S.open = null; syncURL(); scrollTo({ top: 0, behavior: 'smooth' }); break;
     case 'comecar': location.href = `study-session.html?origem=revisao&tema=${S.tema}${S.embed ? '&embed=1' : ''}`; return;
     case 'abrir-deck': return ir(`decks.html?tela=deck&deck=${S.deck}`);
-    case 'reenviar': toast('Enviamos um novo link para ana@exemplo.com.'); break;
     case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
     case 'tema': S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; syncURL(); break;
     case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;

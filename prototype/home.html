@@ -2,10 +2,10 @@
 <!--
   PROTÓTIPO DESCARTÁVEL — ticket "Home, banner da Daily Review e notificações".
   Pergunta: como é o Início após o login (banner da Daily Review nos estados do dia, "Marcar como vista",
-  sino com dropdown, Decks recentes e o aviso "Confirme seu e-mail")?
+  sino com dropdown e Decks recentes)?
   Decisão: variante "Faixa" — saudação, faixa compacta da revisão de hoje e Decks recentes em grade.
   As variantes descartadas estão no branch prototype/home.
-  Parâmetros: ?dia=pendente|andamento|backlog|concluida|vista|livre · ?email=pendente · ?tema=claro|escuro · ?frame=mobile.
+  Parâmetros: ?dia=pendente|andamento|backlog|concluida|vista|livre · ?tema=claro|escuro · ?frame=mobile.
   Ticket "Primeiro acesso e Início sem Decks": ?dados=vazio|primeiro (conta nova · depois do 1º estudo).
   Decisão: só estados vazios, sem guia nem Deck de exemplo; o Review Time fica no padrão 19:00 com "Mudar".
   As variantes descartadas (checklist "Primeiros passos", boas-vindas guiada) estão no branch prototype/primeiro-acesso.
@@ -109,7 +109,6 @@ const S = {
   dia: DIAS[P.get('dia')] ? P.get('dia') : 'pendente',
   dados: DADOS[P.get('dados')] ? P.get('dados') : 'cheio',
   hora: '19:00',
-  email: P.get('email') === 'pendente',
   tema: P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'),
   frame: P.get('frame') === 'mobile' ? 'mobile' : 'desktop',
   embed: P.get('embed') === '1',
@@ -120,7 +119,6 @@ let toastId = 0;
 function params() {
   const p = new URLSearchParams({ dia: S.dia, tema: S.tema });
   if (S.dados !== 'cheio') p.set('dados', S.dados);
-  p.set('email', S.email ? 'pendente' : 'ok');
   p.set('novos', S.pausados ? 'pausados' : 'ativos');
   return p;
 }
@@ -286,14 +284,6 @@ function avatarMenu() {
   </div>`;
 }
 
-/* ---------- aviso de e-mail (abaixo do header, em todas as abas) ---------- */
-const emailNotice = () => !S.email ? '' : `
-  <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm md:mb-6">
-    <span class="text-warning">${ic('mail', 'h-5 w-5')}</span>
-    <p class="min-w-0 flex-1">Confirme seu e-mail para receber o aviso da revisão de hoje.</p>
-    <button data-act="reenviar" class="font-medium text-warning underline-offset-4 hover:underline">Reenviar</button>
-  </div>`;
-
 /* ---------- shell ---------- */
 const shell = (content) => `
   <div class="min-h-screen">
@@ -313,7 +303,7 @@ const shell = (content) => `
         </div>
       </div>
     </header>
-    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${emailNotice()}${content}</main>
+    <main class="mx-auto max-w-5xl px-5 pb-36 pt-4 md:px-6 md:pb-16 md:pt-8">${content}</main>
     <nav class="fixed inset-x-0 bottom-0 z-30 bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_hsl(var(--border))] md:hidden">
       <div class="grid grid-cols-4 pb-1 pt-2">
         ${NAV.map((x) => `<button data-act="nav:${x.id}" class="flex flex-col items-center gap-1 text-[11px] font-medium ${x.id === S.nav ? 'text-foreground' : 'text-muted-foreground'}"><span class="grid h-8 w-14 place-items-center rounded-full ${x.id === S.nav ? 'bg-primary/15 text-primary' : ''}">${ic(x.icon)}</span>${x.label}</button>`).join('')}
@@ -491,7 +481,6 @@ function switcher() {
     ${S.dados === 'cheio' ? `<select data-sel="dia" class="h-8 rounded-full bg-transparent px-2 hover:bg-white/15" style="color-scheme:dark" aria-label="Estado do dia">
       ${Object.entries(DIAS).map(([k, l]) => `<option value="${k}" ${k === S.dia ? 'selected' : ''}>${l}</option>`).join('')}
     </select>` : ''}
-    <button data-act="email" class="${b} ${S.email ? 'bg-amber-500/30 text-amber-300' : ''}" aria-label="Aviso de e-mail" title="${S.email ? 'E-mail não confirmado' : 'E-mail confirmado'}">${ic('mail', 'h-4 w-4')}</button>
     <button data-act="tema" class="${b}" aria-label="Trocar tema" title="Tema">${ic(S.tema === 'escuro' ? 'moon' : 'sun', 'h-4 w-4')}</button>
     <button data-act="frame" class="${b} hidden md:grid" aria-label="Trocar largura" title="${S.frame === 'mobile' ? 'Ver desktop' : 'Ver mobile (390px)'}">${ic(S.frame === 'mobile' ? 'monitor' : 'phone', 'h-4 w-4')}</button>
   </div>`;
@@ -550,7 +539,6 @@ document.addEventListener('click', (e) => {
     }
     case 'pausar': S.pausados = true; syncURL(); toast('Cards novos pausados até você pôr a revisão em dia.'); break;
     case 'retomar': S.pausados = false; syncURL(); break;
-    case 'reenviar': toast('Enviamos um novo link para ana@exemplo.com.'); break;
     case 'toast-act': {
       const t = S.toasts.find((x) => x.id == arg);
       S.toasts = S.toasts.filter((x) => x.id != arg);
@@ -558,7 +546,6 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'toast-close': S.toasts = S.toasts.filter((x) => x.id != arg); break;
-    case 'email': S.email = !S.email; syncURL(); break;
     case 'tema': S.tema = S.tema === 'escuro' ? 'claro' : 'escuro'; syncURL(); break;
     case 'frame': S.frame = S.frame === 'mobile' ? 'desktop' : 'mobile'; syncURL(); break;
   }

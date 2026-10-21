@@ -15,7 +15,7 @@ Protótipo HTML navegável (fidelidade média, dados falsos) de todas as telas d
   - Formato: HTML navegável, Tailwind + componentes estilo shadcn, dados falsos.
   - Responsivo mobile-first; Study Session pensada para uso com o polegar; editor de Card otimizado para desktop.
   - Visual minimalista, modo claro e escuro, interface só em PT-BR.
-  - Auth: e-mail + senha e login com Google.
+  - Auth: e-mail + senha e login com Google. Revisto: só Google ([Login só com Google](issues/18-login-so-com-google.md)).
   - Cards com pergunta e resposta em rich text.
   - Fluxo de criação: criar vários Cards seguidos num Deck, depois "Estudar agora" abre uma Study Session só com os novos; em seguida eles entram no agendamento normal.
   - Cards novos: "Estudar agora" traz todos os Cards novos do lote, sem limite. Cards novos não estudados na hora entram nas próximas Daily Reviews respeitando o limite "Novos por dia" (padrão 20, ajustável em Configurações).
@@ -45,6 +45,7 @@ Protótipo HTML navegável (fidelidade média, dados falsos) de todas as telas d
 - [Primeiro acesso e Início sem Decks](issues/14-primeiro-acesso.md): sem onboarding nem Deck de exemplo. O Início vazio tem "Boas-vindas", o bloco "Crie seu primeiro Deck" e a linha "O aviso chega às 19:00 · Mudar". O Review Time não é perguntado. Sem Cards, não há faixa e o sino diz "Nada por aqui ainda". Base em `prototype/home.html?dados=vazio`.
 - [E-mails da Daily Review, confirmação e senha](issues/15-emails.md): a Daily Review abre com a pergunta do primeiro Card ("Você lembra?") e "Ver a resposta", mais "Marcar como vista" em link. Confirmação e senha são um "Bilhete": texto corrido e um botão. Não há contagens por Deck nem Sequência no e-mail. Base em `prototype/emails.html`.
 - [Nome do app](issues/16-nome-do-app.md): o app se chama Daruma, porque "Lembra" já existe em dois apps de flashcards. O ícone é um boneco Daruma em silhueta verde com um olho pintado, ao lado do wordmark, e aparece sozinho no favicon e no remetente. Remetente ilustrativo: "Daruma <aviso@daruma.app>".
+- [Login só com Google](issues/18-login-so-com-google.md): a única forma de entrar é a conta Google; a primeira entrada cria a conta. Saem senha, cadastro, "Esqueci a senha", confirmação de e-mail (aviso âmbar e dois e-mails) e, em Configurações, senha e vínculo do Google. Revê os tickets 04, 11 e 15.
 - [Montagem final do protótipo navegável](issues/17-montagem-final.md): entrada em `prototype/index.html` (mapa de todas as telas e estados); barra "Protótipo" recolhida num botão; `prototype/daruma.js` comum a todas as páginas (ícone, tema, navegação, "+ Novo" e sino); todos os destinos ligados; dados alinhados (17 Cards hoje, 261 no total).
 
 ## Not yet specified

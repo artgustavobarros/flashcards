@@ -1,0 +1,144 @@
+<!doctype html>
+<!--
+  PROTÓTIPO DESCARTÁVEL — ticket "Login só com Google".
+  Pergunta: para onde levam "Termos" e "Política de privacidade" do Login?
+  Decisão: uma página pública só, em texto simples, com as âncoras #termos e #privacidade.
+  É também a URL de política de privacidade da tela de consentimento do Google.
+  O contato é real: contato@artbarros.tech, encaminhado ao Gmail pelo ImprovMX. Parâmetros: ?tema=claro|escuro.
+  Tokens vêm de prototype/fundacao-visual.html. Nada é salvo.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Termos e privacidade · Daruma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Outfit:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script src="daruma.js"></script>
+<script>
+  const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          border: c('border'), input: c('input'), ring: c('ring'),
+          background: c('background'), foreground: c('foreground'),
+          card: { DEFAULT: c('card'), foreground: c('card-foreground') },
+          popover: { DEFAULT: c('popover'), foreground: c('popover-foreground') },
+          primary: { DEFAULT: c('primary'), foreground: c('primary-foreground') },
+          secondary: { DEFAULT: c('secondary'), foreground: c('secondary-foreground') },
+          muted: { DEFAULT: c('muted'), foreground: c('muted-foreground') },
+          accent: { DEFAULT: c('accent'), foreground: c('accent-foreground') },
+          destructive: { DEFAULT: c('destructive'), foreground: c('destructive-foreground') },
+          success: { DEFAULT: c('success'), foreground: c('success-foreground') },
+          warning: { DEFAULT: c('warning'), foreground: c('warning-foreground') },
+        },
+        borderRadius: {
+          sm: 'calc(var(--radius) - 4px)', md: 'calc(var(--radius) - 2px)',
+          lg: 'var(--radius)', xl: 'calc(var(--radius) + 4px)', btn: 'var(--radius-btn)',
+        },
+        fontFamily: { sans: 'var(--font-sans)', display: 'var(--font-display)', mono: 'var(--font-mono)' },
+        boxShadow: { card: 'var(--shadow-card)', pop: 'var(--shadow-pop)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground font-sans antialiased; }
+  }
+</style>
+<style>
+  /* Tokens escolhidos (variante B4 · Zinc + verde): neutros do Zinc, verde como cor de ação e de sucesso */
+  :root {
+    --font-sans: 'DM Sans', system-ui, sans-serif; --font-display: 'Outfit', system-ui, sans-serif; --font-mono: var(--font-sans);
+    --radius: .875rem; --radius-btn: 9999px;
+    --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -6px rgb(15 23 42 / .08);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / .25);
+    --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; --card-foreground: 240 10% 3.9%; --popover: 0 0% 100%; --popover-foreground: 240 10% 3.9%;
+    --primary: 152 42% 32%; --primary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%; --destructive-foreground: 0 0% 98%;
+    --success: 152 42% 32%; --success-foreground: 0 0% 100%;
+    --warning: 32 95% 40%; --warning-foreground: 0 0% 100%;
+    --border: 240 5.9% 90%; --input: 240 5.9% 88%; --ring: 152 42% 32%;
+  }
+  .dark {
+    --shadow-card: 0 1px 2px rgb(0 0 0 / .3); --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .7);
+    --background: 240 10% 3.9%; --foreground: 0 0% 98%;
+    --card: 240 8% 6%; --card-foreground: 0 0% 98%; --popover: 240 8% 7%; --popover-foreground: 0 0% 98%;
+    --primary: 148 40% 55%; --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%; --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%; --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 58%; --destructive-foreground: 0 0% 98%;
+    --success: 148 40% 55%; --success-foreground: 240 10% 3.9%;
+    --warning: 38 92% 55%; --warning-foreground: 240 10% 4%;
+    --border: 240 3.7% 15.9%; --input: 240 3.7% 20%; --ring: 148 40% 55%;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+</style>
+<style>
+  /* mobile (moldura ou DevTools): a barra de rolagem do navegador desktop não ocupa largura, como num celular */
+  html.embed { scrollbar-width: none; } html.embed::-webkit-scrollbar { display: none; }
+  @media (max-width: 767px) { html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } }
+</style>
+<script>if (new URLSearchParams(location.search).get('embed') === '1') document.documentElement.classList.add('embed');</script>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const P = new URLSearchParams(location.search);
+const tema = P.get('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');
+document.documentElement.classList.toggle('dark', tema === 'escuro');
+
+const CONTATO = 'contato@artbarros.tech';
+const back = '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>';
+const ic = (d, cls = 'h-4 w-4') => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} shrink-0" aria-hidden="true">${d}</svg>`;
+const secao = (id, titulo, itens) => `
+  <section id="${id}" class="scroll-mt-6 space-y-4">
+    <h2 class="font-display text-2xl font-semibold tracking-tight">${titulo}</h2>
+    ${itens.map(([t, p]) => `<div class="space-y-1"><h3 class="font-medium">${t}</h3><p class="text-muted-foreground">${p}</p></div>`).join('')}
+  </section>`;
+
+document.getElementById('app').innerHTML = `
+  <div class="min-h-screen">
+    <header class="px-5 py-5 md:px-10">
+      <a href="auth.html" data-ir="auth.html" class="inline-flex items-center gap-2 font-display text-2xl font-semibold tracking-tight text-primary">${daruma()}Daruma</a>
+    </header>
+    <main class="mx-auto max-w-2xl space-y-10 px-5 pb-24 pt-4 leading-relaxed">
+      <div class="space-y-2">
+        <button onclick="history.length > 1 ? history.back() : ir('auth.html')" class="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline">${ic(back)}Voltar</button>
+        <h1 class="font-display text-3xl font-semibold tracking-tight">Termos e privacidade</h1>
+        <p class="text-sm text-muted-foreground">Atualizado em 21 de outubro de 2026.</p>
+        <nav class="flex gap-4 pt-1 text-sm"><a href="#termos" class="font-medium text-primary hover:underline">Termos de uso</a><a href="#privacidade" class="font-medium text-primary hover:underline">Privacidade</a></nav>
+      </div>
+      ${secao('termos', 'Termos de uso', [
+        ['O que é o Daruma', 'Um app gratuito para estudar com Cards e repetição espaçada. É um projeto pessoal, mantido por uma pessoa.'],
+        ['Sua conta', 'Você entra com sua conta Google. Na primeira vez, sua conta no Daruma é criada. Para entrar, você precisa ter acesso a essa conta Google.'],
+        ['Seu conteúdo', 'O que você escreve nos Cards é seu. Não guarde aqui conteúdo ilegal ou de outras pessoas sem permissão.'],
+        ['Sem garantia', 'O app é oferecido como está. Ele pode mudar, ficar fora do ar ou ser encerrado.'],
+        ['Sair quando quiser', 'Em Configurações → Conta → Apagar conta, você apaga a conta e tudo o que ela guarda.'],
+      ])}
+      ${secao('privacidade', 'Privacidade', [
+        ['O que guardamos', 'Do Google: seu nome e seu e-mail. Do que você cria: Decks, Cards, Labels, Comments, imagens e o histórico de Ratings. Das Configurações: Review Time, fuso, Novos por dia e tema.'],
+        ['Para quê', 'Só para o app funcionar: montar a revisão de cada dia, mostrar seu Progresso e enviar o aviso da revisão.'],
+        ['E-mails', 'O único e-mail que o Daruma envia é o aviso da revisão de hoje. Você o desliga em Configurações → Notificações.'],
+        ['Com quem', 'Não vendemos nem compartilhamos seus dados. Usamos três serviços para o app funcionar: o Google, para o login; o Resend, para enviar o aviso; e a Hostinger, onde ficam o servidor e o banco de dados.'],
+        ['Cookies', 'Só um cookie de sessão, para manter você conectado. Não há anúncios nem rastreamento.'],
+        ['Apagar seus dados', 'Apagar a conta remove tudo na hora. As cópias de segurança do servidor somem em até 3 semanas.'],
+        ['Seus direitos', `Pela LGPD, você pode pedir acesso, correção ou exclusão dos seus dados. Escreva para <a href="mailto:${CONTATO}" class="font-medium text-primary hover:underline">${CONTATO}</a>.`],
+      ])}
+    </main>
+  </div>`;
+</script>
+</body>
+</html>
