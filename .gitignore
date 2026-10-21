@@ -1,0 +1,6 @@
+# Claude Code: local settings and worktrees
+.claude/settings.local.json
+.claude/worktrees/
+
+# impeccable engine binary (per platform, ~21 MB); recreate with `npx impeccable@4.7.0 install -y --project`
+**/impeccable/scripts/bin/
