@@ -32,6 +32,9 @@ function Shell({
   const matches = useMatches();
   const title = routeTitle(matches) ?? "Daruma";
   const hideNew = matches.some((match) => match.staticData.hideNew);
+  if (matches.some((match) => match.staticData.focus)) {
+    return children;
+  }
 
   return (
     <div className="min-h-dvh">

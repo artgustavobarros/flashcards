@@ -1,6 +1,8 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Layers, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
-import { toast } from "sonner";
+import { DeckPickerDialog } from "~/components/decks/deck-picker-dialog";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +17,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import { decksQuery } from "~/lib/queries";
 
 const OPTIONS = [
   {
@@ -22,32 +25,56 @@ const OPTIONS = [
     icon: Layers,
     title: "Novo Deck",
     hint: "Comece uma coleção nova",
-    unavailable: "Criar Decks ainda não está disponível.",
   },
   {
     id: "cards",
     icon: Plus,
     title: "Adicionar Cards a…",
     hint: "Escolha um Deck existente",
-    unavailable: "O editor de Cards ainda não existe.",
   },
 ] as const;
 
 type Option = (typeof OPTIONS)[number];
 
-// Neither screen exists yet; both options get real destinations with Decks and Cards.
-// Each item carries data-option so one handler serves the whole list.
-function notifyUnavailable(event: { currentTarget: EventTarget | null }) {
-  const id = (event.currentTarget as HTMLElement | null)?.dataset.option;
-  const option = OPTIONS.find((o) => o.id === id);
-  if (option) {
-    toast(option.unavailable);
-  }
-}
+// "Novo Deck" opens the editor; "Adicionar Cards a…" asks for the Deck first (straight to
+// "Novo Deck" when there is none). Each item carries data-option so one handler serves the list.
+function useNewOptions() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [picking, setPicking] = useState(false);
 
-// Until the Card editor exists.
-export function notifyEditorSoon() {
-  toast("O editor de Cards ainda não existe.");
+  const choose = useCallback(
+    async (event: { currentTarget: EventTarget | null }) => {
+      const id = (event.currentTarget as HTMLElement | null)?.dataset.option;
+      if (id === "cards") {
+        const { decks } = await queryClient.ensureQueryData(decksQuery);
+        if (decks.length) {
+          setPicking(true);
+          return;
+        }
+      }
+      await navigate({ to: "/decks/novo" });
+    },
+    [navigate, queryClient]
+  );
+  const pick = useCallback(
+    (deck: { id: string }) => {
+      setPicking(false);
+      navigate({ params: { deckId: deck.id }, to: "/decks/$deckId/adicionar" });
+    },
+    [navigate]
+  );
+  const closePicker = useCallback(() => setPicking(false), []);
+
+  const picker = (
+    <DeckPickerDialog
+      onOpenChange={closePicker}
+      onPick={pick}
+      open={picking}
+      title="Adicionar Cards a…"
+    />
+  );
+  return { choose, picker };
 }
 
 function OptionBody({ option }: { option: Option }) {
@@ -66,27 +93,31 @@ function OptionBody({ option }: { option: Option }) {
 
 // Desktop: a menu under the green "+ Novo" pill.
 export function NewMenu() {
+  const { choose, picker } = useNewOptions();
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button>
-          <Plus data-icon="inline-start" />
-          Novo
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        {OPTIONS.map((option) => (
-          <DropdownMenuItem
-            className="items-start gap-3 px-3 py-2.5"
-            data-option={option.id}
-            key={option.id}
-            onSelect={notifyUnavailable}
-          >
-            <OptionBody option={option} />
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button>
+            <Plus data-icon="inline-start" />
+            Novo
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          {OPTIONS.map((option) => (
+            <DropdownMenuItem
+              className="items-start gap-3 px-3 py-2.5"
+              data-option={option.id}
+              key={option.id}
+              onSelect={choose}
+            >
+              <OptionBody option={option} />
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {picker}
+    </>
   );
 }
 
@@ -94,12 +125,13 @@ export function NewMenu() {
 export function NewSheet() {
   const [open, setOpen] = useState(false);
   const openSheet = useCallback(() => setOpen(true), []);
-  const closeAndNotify = useCallback(
+  const { choose, picker } = useNewOptions();
+  const closeAndChoose = useCallback(
     (event: { currentTarget: EventTarget | null }) => {
       setOpen(false);
-      notifyUnavailable(event);
+      choose(event);
     },
-    []
+    [choose]
   );
 
   return (
@@ -131,7 +163,7 @@ export function NewSheet() {
                 className="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left hover:bg-accent [&_svg]:size-4"
                 data-option={option.id}
                 key={option.id}
-                onClick={closeAndNotify}
+                onClick={closeAndChoose}
                 type="button"
               >
                 <OptionBody option={option} />
@@ -140,6 +172,7 @@ export function NewSheet() {
           </div>
         </SheetContent>
       </Sheet>
+      {picker}
     </>
   );
 }
