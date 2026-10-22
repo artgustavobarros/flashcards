@@ -13,6 +13,21 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The API specs run against a real Postgres (apps/api/test/global-setup.ts).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: daruma
+          POSTGRES_PASSWORD: daruma
+          POSTGRES_DB: daruma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U daruma -d daruma"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
     steps:
       - uses: actions/checkout@v7
       # Reads the pnpm version from packageManager in package.json.
@@ -26,4 +41,5 @@ jobs:
       # web and api import @daruma/shared from its dist.
       - run: pnpm --filter @daruma/shared build
       - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm build
