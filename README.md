@@ -31,6 +31,12 @@ Better Auth runs inside Nest (`apps/api/src/auth`), mounted on `/api/auth`. The 
 - **Dev login**: `POST /api/auth/dev-login/sign-in` with `{ "email": "...", "name"?: "..." }` finds or creates that user and sets the cookie. It exists only when `DEV_LOGIN=true`, and the API refuses to start with it unless `NODE_ENV` is `development` or `test`. `NODE_ENV` has no default, so a container that forgets it does not boot. The login page shows its button only in Vite dev builds. E2E tests can call the endpoint directly.
 - **Google**: create an OAuth client (type "Web application") in Google Cloud Console, add `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI, and put the ID and secret in `apps/api/.env`. Without them, "Continuar com Google" shows the error alert. Outside `development` and `test` both are required.
 
+## Decks, Cards and images
+
+A Card's question and answer are Tiptap JSON, validated by `richTextSchema` in `packages/shared` and stored with their plain text (for search and list previews). Deleting a Deck or a Card is a soft delete; `POST /api/decks/:id/restore` and `POST /api/cards/:id/restore` back the toast's "Desfazer".
+
+Images are uploaded with `POST /api/images` (multipart, field `file`, PNG/JPG/WebP/GIF up to 5 MB, type read from the bytes) and saved under `UPLOADS_DIR/<user id>/`. `GET /api/images/<file>` only looks in the signed-in user's folder, which is the owner check.
+
 ## Scripts
 
 | Command          | What it does                                  |

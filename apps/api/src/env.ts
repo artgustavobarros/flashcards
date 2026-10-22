@@ -24,6 +24,8 @@ export const env = createEnv({
     // No default: a container that forgets it must not boot as "development".
     NODE_ENV: z.enum(["development", "test", "production"]),
     PORT: z.coerce.number().int().positive().default(3001),
+    // Card images, one folder per user. A Docker volume in production.
+    UPLOADS_DIR: z.string().default("uploads"),
   },
 });
 
