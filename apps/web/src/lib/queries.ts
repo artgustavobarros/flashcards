@@ -4,7 +4,14 @@ import {
   type QueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import { getCard, getCards, getDeck, getDecks, getLabels } from "~/lib/api";
+import {
+  getCard,
+  getCards,
+  getComments,
+  getDeck,
+  getDecks,
+  getLabels,
+} from "~/lib/api";
 
 // Keys: ["decks"] for every Deck query, ["cards"] for every Card query, ["labels"] for Labels.
 // Any change to a Card moves Deck and Label counts too, so mutations refresh all three
@@ -26,6 +33,13 @@ export const cardsQuery = (query: CardsQuery) =>
     placeholderData: keepPreviousData,
     queryFn: () => getCards(query),
     queryKey: ["cards", "list", query],
+  });
+
+// Under ["cards"], so refreshLibrary refreshes them too.
+export const commentsQuery = (cardId: string) =>
+  queryOptions({
+    queryFn: () => getComments(cardId),
+    queryKey: ["cards", cardId, "comments"],
   });
 
 export const labelsQuery = queryOptions({

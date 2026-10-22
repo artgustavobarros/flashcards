@@ -15,13 +15,18 @@ import {
   Ellipsis,
   FolderInput,
   Pencil,
+  Plus,
+  Tag,
   Trash2,
 } from "lucide-react";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { CardComments } from "~/components/cards/card-comments";
 import { DueBadge } from "~/components/cards/due-badge";
 import { ConfirmDialog } from "~/components/confirm-dialog";
 import { DeckPickerDialog } from "~/components/decks/deck-picker-dialog";
+import { LabelChip } from "~/components/labels/label-chip";
+import { LabelsDialog } from "~/components/labels/labels-dialog";
 import { RichTextView } from "~/components/rich-text/rich-text-view";
 import { usePageHeader } from "~/components/shell/page-header";
 import { Button } from "~/components/ui/button";
@@ -31,9 +36,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { deleteCard, isMissing, restoreCard, updateCard } from "~/lib/api";
+import {
+  deleteCard,
+  isMissing,
+  labelCards,
+  restoreCard,
+  updateCard,
+} from "~/lib/api";
 import { cardOrigin } from "~/lib/card-origin";
-import { cardQuery, refreshLibrary } from "~/lib/queries";
+import {
+  cardQuery,
+  commentsQuery,
+  labelsQuery,
+  refreshLibrary,
+} from "~/lib/queries";
 import { dueBadge, nextReviewText, STATE_LABEL } from "~/lib/schedule";
 
 export const Route = createFileRoute("/_app/decks/cards/$cardId/")({
@@ -41,7 +57,11 @@ export const Route = createFileRoute("/_app/decks/cards/$cardId/")({
   head: () => ({ meta: [{ title: "Card · Daruma" }] }),
   loader: async ({ context: { queryClient }, params: { cardId } }) => {
     try {
-      await queryClient.ensureQueryData(cardQuery(cardId));
+      await Promise.all([
+        queryClient.ensureQueryData(cardQuery(cardId)),
+        queryClient.ensureQueryData(commentsQuery(cardId)),
+        queryClient.ensureQueryData(labelsQuery),
+      ]);
     } catch (error) {
       if (isMissing(error)) {
         throw notFound();
@@ -68,7 +88,9 @@ function Page() {
   const {
     data: { card, today },
   } = useSuspenseQuery(cardQuery(cardId));
-  const [dialog, setDialog] = useState<"move" | "delete" | null>(null);
+  const [dialog, setDialog] = useState<"move" | "labels" | "delete" | null>(
+    null
+  );
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   // Back to the list the Card was opened from, or its Deck.
@@ -99,7 +121,7 @@ function Page() {
     mutationFn: () => deleteCard(card.id),
     onError: () => toast.error("Não foi possível apagar o Card."),
     onSuccess: async () => {
-      await navigate({ params: { deckId: card.deckId }, to: "/decks/$deckId" });
+      await navigate({ href: origin.href });
       queryClient.removeQueries({ queryKey: ["cards", card.id] });
       await refreshLibrary(queryClient);
       toast.success("Card apagado.", {
@@ -114,8 +136,26 @@ function Page() {
     },
   });
 
+  // Applied on each tap; the page refreshes when the dialog closes.
+  const toggleLabel = useCallback(
+    async (label: { id: string }, add: boolean) => {
+      await labelCards({ add, cardIds: [card.id], labelId: label.id });
+      await queryClient.invalidateQueries({ queryKey: ["labels"] });
+    },
+    [card.id, queryClient]
+  );
+  const labelSets = useMemo(
+    () => [card.labels.map((label) => label.id)],
+    [card.labels]
+  );
+  const closeLabels = useCallback(() => {
+    setDialog(null);
+    refreshLibrary(queryClient);
+  }, [queryClient]);
+
   const late = dueBadge(card, today)?.tone === "late";
   const openMove = useCallback(() => setDialog("move"), []);
+  const openLabels = useCallback(() => setDialog("labels"), []);
   const openDelete = useCallback(() => setDialog("delete"), []);
   // Dialogs only ever ask to close; they are opened from the menu.
   const closeDialog = useCallback(() => setDialog(null), []);
@@ -158,6 +198,10 @@ function Page() {
                 <FolderInput />
                 Mover para Deck
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={openLabels}>
+                <Tag />
+                Labels
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={openDelete} variant="destructive">
                 <Trash2 />
                 Apagar Card
@@ -188,6 +232,20 @@ function Page() {
               <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
             </button>
           </dd>
+          <dt className="pt-0.5 text-muted-foreground">Labels</dt>
+          <dd className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {card.labels.map((label) => (
+              <LabelChip key={label.id} name={label.name} />
+            ))}
+            <button
+              className="inline-flex items-center gap-1 rounded-full border border-dashed px-2.5 py-0.5 text-muted-foreground text-xs hover:text-foreground"
+              onClick={openLabels}
+              type="button"
+            >
+              <Plus className="size-3" />
+              {card.labels.length ? "Editar" : "Label"}
+            </button>
+          </dd>
           <dt className="pt-0.5 text-muted-foreground">Estado</dt>
           <dd>{STATE_LABEL[card.state]}</dd>
           <dt className="pt-0.5 text-muted-foreground">Próxima revisão</dt>
@@ -200,6 +258,7 @@ function Page() {
             </span>
           </dd>
         </dl>
+        <CardComments cardId={card.id} />
       </div>
       <DeckPickerDialog
         currentDeckId={card.deckId}
@@ -208,6 +267,13 @@ function Page() {
         onPick={moveTo}
         open={dialog === "move"}
         title="Mover para Deck"
+      />
+      <LabelsDialog
+        description="Marque as Labels deste Card."
+        labelSets={labelSets}
+        onOpenChange={closeLabels}
+        onToggle={toggleLabel}
+        open={dialog === "labels"}
       />
       <ConfirmDialog
         body="Os Comments e o histórico de Ratings dele também somem."

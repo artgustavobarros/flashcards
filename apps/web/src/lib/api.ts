@@ -4,6 +4,8 @@ import {
   type CreateCardBody,
   cardResponseSchema,
   cardsResponseSchema,
+  commentResponseSchema,
+  commentsResponseSchema,
   createCardResponseSchema,
   deckResponseSchema,
   decksResponseSchema,
@@ -134,6 +136,27 @@ export const restoreLabel = (id: string) =>
 
 export const isTaken = (error: unknown) =>
   error instanceof ApiError && error.status === 409;
+
+// Oldest first.
+export const getComments = (cardId: string) =>
+  getJson(`/api/cards/${cardId}/comments`, commentsResponseSchema);
+
+export async function createComment(cardId: string, body: string) {
+  const res = await sendJson("POST", `/api/cards/${cardId}/comments`, {
+    body,
+  });
+  return commentResponseSchema.parse(await res.json()).comment;
+}
+
+export async function updateComment(id: string, body: string) {
+  await sendJson("PATCH", `/api/comments/${id}`, { body });
+}
+
+export const deleteComment = (id: string) =>
+  send(`/api/comments/${id}`, { method: "DELETE" });
+
+export const restoreComment = (id: string) =>
+  send(`/api/comments/${id}/restore`, { method: "POST" });
 
 // Returns the src to put in the editor: /api/images/<uuid>.<ext>.
 export async function uploadImage(file: File) {

@@ -1,4 +1,9 @@
-import { foldText, labelKey, labelNameSchema } from "@daruma/shared";
+import {
+  type CardLabel,
+  foldText,
+  labelKey,
+  labelNameSchema,
+} from "@daruma/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import {
@@ -16,7 +21,7 @@ import { createLabel, isTaken } from "~/lib/api";
 import { labelsQuery } from "~/lib/queries";
 
 // Puts a Label on all the Cards, or takes it off all of them.
-export type ToggleLabel = (labelId: string, add: boolean) => Promise<void>;
+export type ToggleLabel = (label: CardLabel, add: boolean) => Promise<void>;
 
 // Labels for one or more Cards: a box per Label, checked, empty, or a dash when only some of
 // the Cards have it. Tapping applies right away. The search offers "Criar Label “x”".
@@ -72,21 +77,21 @@ function LabelsPicker({
   );
 
   const apply = useCallback(
-    async (labelId: string, add: boolean) => {
+    async (label: CardLabel, add: boolean) => {
       const before = sets;
       setSets(
         sets.map((set) => {
           const next = new Set(set);
           if (add) {
-            next.add(labelId);
+            next.add(label.id);
           } else {
-            next.delete(labelId);
+            next.delete(label.id);
           }
           return next;
         })
       );
       try {
-        await onToggle(labelId, add);
+        await onToggle(label, add);
       } catch {
         setSets(before);
         toast.error("Não foi possível mudar as Labels.");
@@ -99,12 +104,13 @@ function LabelsPicker({
   const toggle = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
       const { labelId } = event.currentTarget.dataset;
-      if (labelId) {
-        const all = sets.every((set) => set.has(labelId));
-        apply(labelId, !all);
+      const label = labels.find((row) => row.id === labelId);
+      if (label) {
+        const all = sets.every((set) => set.has(label.id));
+        apply(label, !all);
       }
     },
-    [apply, sets]
+    [apply, labels, sets]
   );
 
   const create = useCallback(async () => {
@@ -117,7 +123,7 @@ function LabelsPicker({
     try {
       const label = await createLabel(name.data);
       setSearch("");
-      await apply(label.id, true);
+      await apply(label, true);
       await queryClient.invalidateQueries({ queryKey: ["labels"] });
       toast.success(`Label “${label.name}” criada.`);
     } catch (error) {
