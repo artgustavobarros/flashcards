@@ -35,6 +35,8 @@ declare module "@tanstack/react-router" {
     router: ReturnType<typeof getRouter>;
   }
   interface StaticDataRouteOption {
+    // No "+ Novo" pill on mobile (the Card page).
+    hideNew?: boolean;
     // Shown as the big header title on mobile.
     title?: string;
   }

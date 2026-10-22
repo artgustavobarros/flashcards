@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/dm-sans";
 @import "@fontsource-variable/outfit";
+@import "katex/dist/katex.min.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -126,4 +127,69 @@ html [data-sonner-toaster] {
 }
 [data-sonner-toast][data-styled="true"].cn-toast {
   box-shadow: var(--elevation-pop);
+}
+
+/* A Card's question and answer, in the editor and read-only (Tiptap). */
+@layer components {
+  .rich-text .tiptap {
+    overflow-wrap: anywhere;
+    outline: none;
+  }
+  .rich-text strong {
+    font-weight: 650;
+  }
+  .rich-text ul {
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  .rich-text ol {
+    padding-left: 1.25rem;
+    list-style: decimal;
+  }
+  .rich-text code {
+    padding: 0.1em 0.35em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em;
+    background: var(--muted);
+    border-radius: 6px;
+  }
+  .rich-text pre {
+    padding: 0.75rem 0.9rem;
+    margin: 0.5rem 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em;
+    white-space: pre-wrap;
+    background: var(--muted);
+    border-radius: 10px;
+  }
+  .rich-text pre code {
+    padding: 0;
+    font-size: inherit;
+    background: none;
+  }
+  .rich-text img {
+    max-width: min(100%, 320px);
+    margin: 0.5rem 0;
+    border-radius: 10px;
+  }
+  .rich-text img.ProseMirror-selectednode {
+    outline: 2px solid var(--ring);
+  }
+  .rich-text [data-type="inline-math"] {
+    display: inline-block;
+    padding: 0 0.3em;
+    background: color-mix(in oklab, var(--primary) 10%, transparent);
+    border-radius: 6px;
+  }
+  .rich-text [data-type="block-math"] {
+    margin: 0.5rem 0;
+    overflow-x: auto;
+  }
+  .rich-text .is-editor-empty:first-child::before {
+    float: left;
+    height: 0;
+    color: var(--muted-foreground);
+    pointer-events: none;
+    content: attr(data-placeholder);
+  }
 }
