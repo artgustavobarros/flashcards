@@ -35,6 +35,8 @@ declare module "@tanstack/react-router" {
     router: ReturnType<typeof getRouter>;
   }
   interface StaticDataRouteOption {
+    // A whole page without the shell: no header, nav or tab bar (the Card editor).
+    focus?: boolean;
     // No "+ Novo" pill on mobile (the Card page).
     hideNew?: boolean;
     // Shown as the big header title on mobile.

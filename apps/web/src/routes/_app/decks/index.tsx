@@ -3,7 +3,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, Layers, Plus } from "lucide-react";
 import { deckCountsLine, TodayBadge } from "~/components/decks/deck-counts";
 import { EmptyState } from "~/components/empty-state";
-import { notifyEditorSoon } from "~/components/shell/new-menu";
 import { Button } from "~/components/ui/button";
 import { decksQuery } from "~/lib/queries";
 
@@ -25,12 +24,14 @@ function Page() {
         </h2>
         {decks.length ? (
           <Button
+            asChild
             className="ml-auto hidden sm:inline-flex"
-            onClick={notifyEditorSoon}
             variant="outline"
           >
-            <Plus data-icon="inline-start" />
-            Novo Deck
+            <Link to="/decks/novo">
+              <Plus data-icon="inline-start" />
+              Novo Deck
+            </Link>
           </Button>
         ) : null}
       </div>
@@ -71,9 +72,11 @@ function Page() {
           icon={Layers}
           title="Crie seu primeiro Deck"
         >
-          <Button className="mt-1" onClick={notifyEditorSoon}>
-            <Plus data-icon="inline-start" />
-            Novo Deck
+          <Button asChild className="mt-1">
+            <Link to="/decks/novo">
+              <Plus data-icon="inline-start" />
+              Novo Deck
+            </Link>
           </Button>
         </EmptyState>
       )}

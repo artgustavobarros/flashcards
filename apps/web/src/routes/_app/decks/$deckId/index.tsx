@@ -25,7 +25,6 @@ import { CardList } from "~/components/cards/card-list";
 import { ConfirmDialog } from "~/components/confirm-dialog";
 import { RenameDeckDialog } from "~/components/decks/rename-deck-dialog";
 import { EmptyState } from "~/components/empty-state";
-import { notifyEditorSoon } from "~/components/shell/new-menu";
 import { usePageHeader } from "~/components/shell/page-header";
 import { Button } from "~/components/ui/button";
 import {
@@ -183,13 +182,11 @@ function Page() {
             <Play data-icon="inline-start" />
             Estudar
           </Button>
-          <Button
-            className="flex-1 sm:flex-none"
-            onClick={notifyEditorSoon}
-            variant="outline"
-          >
-            <Plus data-icon="inline-start" />
-            Adicionar Cards
+          <Button asChild className="flex-1 sm:flex-none" variant="outline">
+            <Link params={{ deckId }} to="/decks/$deckId/adicionar">
+              <Plus data-icon="inline-start" />
+              Adicionar Cards
+            </Link>
           </Button>
           <Button asChild className="w-full sm:w-auto" variant="link">
             <Link to="/progresso">
@@ -207,9 +204,11 @@ function Page() {
           icon={Layers}
           title="Este Deck ainda não tem Cards"
         >
-          <Button className="mt-1" onClick={notifyEditorSoon}>
-            <Plus data-icon="inline-start" />
-            Adicionar Cards
+          <Button asChild className="mt-1">
+            <Link params={{ deckId }} to="/decks/$deckId/adicionar">
+              <Plus data-icon="inline-start" />
+              Adicionar Cards
+            </Link>
           </Button>
         </EmptyState>
       )}

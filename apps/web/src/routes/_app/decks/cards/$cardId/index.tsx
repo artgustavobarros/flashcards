@@ -20,10 +20,9 @@ import {
 import { type ReactNode, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { DueBadge } from "~/components/cards/due-badge";
-import { MoveCardDialog } from "~/components/cards/move-card-dialog";
 import { ConfirmDialog } from "~/components/confirm-dialog";
+import { DeckPickerDialog } from "~/components/decks/deck-picker-dialog";
 import { RichTextView } from "~/components/rich-text/rich-text-view";
-import { notifyEditorSoon } from "~/components/shell/new-menu";
 import { usePageHeader } from "~/components/shell/page-header";
 import { Button } from "~/components/ui/button";
 import {
@@ -136,9 +135,11 @@ function Page() {
           <p className="min-w-0 flex-1 truncate text-muted-foreground text-sm">
             {card.deckName}
           </p>
-          <Button onClick={notifyEditorSoon} size="sm" variant="outline">
-            <Pencil data-icon="inline-start" />
-            Editar
+          <Button asChild size="sm" variant="outline">
+            <Link params={{ cardId }} to="/decks/cards/$cardId/editar">
+              <Pencil data-icon="inline-start" />
+              Editar
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -198,11 +199,13 @@ function Page() {
           </dd>
         </dl>
       </div>
-      <MoveCardDialog
+      <DeckPickerDialog
         currentDeckId={card.deckId}
-        onMove={moveTo}
+        description="Mover este Card. O agendamento não muda."
         onOpenChange={closeDialog}
+        onPick={moveTo}
         open={dialog === "move"}
+        title="Mover para Deck"
       />
       <ConfirmDialog
         body="Os Comments e o histórico de Ratings dele também somem."

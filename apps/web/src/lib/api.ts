@@ -39,19 +39,12 @@ async function getJson<T>(path: string, schema: z.ZodType<T>) {
   return schema.parse(await res.json());
 }
 
-async function sendJson<T>(
-  method: "POST" | "PATCH",
-  path: string,
-  body: unknown,
-  schema?: z.ZodType<T>
-) {
-  const res = await send(path, {
+const sendJson = (method: "POST" | "PATCH", path: string, body: unknown) =>
+  send(path, {
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
     method,
   });
-  return schema ? schema.parse(await res.json()) : undefined;
-}
 
 export function getHealth() {
   return getJson("/api/health", healthSchema);
@@ -62,8 +55,9 @@ export const getDecks = () => getJson("/api/decks", decksResponseSchema);
 export const getDeck = (id: string) =>
   getJson(`/api/decks/${id}`, deckResponseSchema);
 
-export const renameDeck = (id: string, name: string) =>
-  sendJson("PATCH", `/api/decks/${id}`, { name });
+export async function renameDeck(id: string, name: string) {
+  await sendJson("PATCH", `/api/decks/${id}`, { name });
+}
 
 export const deleteDeck = (id: string) =>
   send(`/api/decks/${id}`, { method: "DELETE" });
@@ -77,11 +71,14 @@ export const getCards = (filter: { deckId?: string }) =>
 export const getCard = (id: string) =>
   getJson(`/api/cards/${id}`, cardResponseSchema);
 
-export const createCard = (body: CreateCardBody) =>
-  sendJson("POST", "/api/cards", body, createCardResponseSchema);
+export async function createCard(body: CreateCardBody) {
+  const res = await sendJson("POST", "/api/cards", body);
+  return createCardResponseSchema.parse(await res.json());
+}
 
-export const updateCard = (id: string, body: UpdateCardBody) =>
-  sendJson("PATCH", `/api/cards/${id}`, body);
+export async function updateCard(id: string, body: UpdateCardBody) {
+  await sendJson("PATCH", `/api/cards/${id}`, body);
+}
 
 export const deleteCard = (id: string) =>
   send(`/api/cards/${id}`, { method: "DELETE" });

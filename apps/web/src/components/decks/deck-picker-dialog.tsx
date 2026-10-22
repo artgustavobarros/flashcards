@@ -18,35 +18,40 @@ const fold = (text: string) =>
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase();
 
-export function MoveCardDialog({
+// Choose a Deck: "Mover para Deck" on a Card, "Adicionar Cards a…" in "+ Novo".
+export function DeckPickerDialog({
   currentDeckId,
-  onMove,
+  description,
   onOpenChange,
+  onPick,
   open,
+  title,
 }: {
-  currentDeckId: string;
-  onMove: (deck: { id: string; name: string }) => void;
+  currentDeckId?: string;
+  description?: string;
   onOpenChange: (open: boolean) => void;
+  onPick: (deck: { id: string; name: string }) => void;
   open: boolean;
+  title: string;
 }) {
   return (
     <ResponsiveDialog
-      description="Mover este Card. O agendamento não muda."
+      description={description}
       onOpenChange={onOpenChange}
       open={open}
-      title="Mover para Deck"
+      title={title}
     >
-      <DeckPicker currentDeckId={currentDeckId} onMove={onMove} />
+      <DeckPicker currentDeckId={currentDeckId} onPick={onPick} />
     </ResponsiveDialog>
   );
 }
 
 function DeckPicker({
   currentDeckId,
-  onMove,
+  onPick,
 }: {
-  currentDeckId: string;
-  onMove: (deck: { id: string; name: string }) => void;
+  currentDeckId?: string;
+  onPick: (deck: { id: string; name: string }) => void;
 }) {
   const [search, setSearch] = useState("");
   const decks = useQuery(decksQuery).data?.decks ?? [];
@@ -63,10 +68,10 @@ function DeckPicker({
         (row) => row.id === event.currentTarget.dataset.deckId
       );
       if (deck) {
-        onMove(deck);
+        onPick(deck);
       }
     },
-    [decks, onMove]
+    [decks, onPick]
   );
 
   return (
