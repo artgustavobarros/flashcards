@@ -37,6 +37,7 @@ import { deleteDeck, isMissing, restoreDeck } from "~/lib/api";
 import { type CardFilters, cardFiltersSchema } from "~/lib/card-filters";
 import { deckQuery, labelsQuery, refreshLibrary } from "~/lib/queries";
 import { plural } from "~/lib/schedule";
+import { clearStudy } from "~/lib/study-storage";
 
 export const Route = createFileRoute("/_app/decks/$deckId/")({
   component: Page,
@@ -64,11 +65,6 @@ export const Route = createFileRoute("/_app/decks/$deckId/")({
   staticData: { title: "Deck" },
   validateSearch: cardFiltersSchema,
 });
-
-// Until the Study Session exists.
-function notifyStudySoon() {
-  toast("A Study Session ainda não está disponível.");
-}
 
 function Stat({
   label,
@@ -129,7 +125,11 @@ function Page() {
     },
   });
 
-  const canStudy = deck.dueCount + deck.newCount > 0;
+  const canStudy = deck.dueCount > 0;
+  const startStudy = useCallback(() => {
+    clearStudy();
+    navigate({ search: { deckId, origem: "deck" }, to: "/estudar" });
+  }, [deckId, navigate]);
   const openRename = useCallback(() => setDialog("rename"), []);
   const openDelete = useCallback(() => setDialog("delete"), []);
   // Dialogs only ever ask to close; they are opened from the menu.
@@ -187,7 +187,7 @@ function Page() {
           <Button
             className="flex-1 sm:flex-none"
             disabled={!canStudy}
-            onClick={notifyStudySoon}
+            onClick={startStudy}
           >
             <Play data-icon="inline-start" />
             Estudar

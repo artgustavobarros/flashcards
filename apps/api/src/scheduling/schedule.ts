@@ -86,12 +86,17 @@ function fsrsCard(schedule: Schedule, today: Day): FsrsCard {
   };
 }
 
-export const retrievability = (schedule: Schedule, today: Day) =>
-  scheduler.get_retrievability(
+export const retrievability = (schedule: Schedule, today: Day) => {
+  // Legacy/imported rows can have a due day without FSRS history. Study them first.
+  if (!schedule.lastReviewedOn || schedule.stability <= 0) {
+    return 0;
+  }
+  return scheduler.get_retrievability(
     fsrsCard(schedule, today),
     dayStart(today),
     false
   );
+};
 
 export type CardState = "new" | "learning" | "mature";
 

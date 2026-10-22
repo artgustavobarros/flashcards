@@ -14,6 +14,7 @@ import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
+import { Route as AppEstudarRouteImport } from './routes/_app/estudar'
 import { Route as AppProgressoRouteImport } from './routes/_app/progresso'
 import { Route as AppDecksIndexRouteImport } from './routes/_app/decks/index'
 import { Route as AppDecksLabelsRouteImport } from './routes/_app/decks/labels'
@@ -46,6 +47,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEstudarRoute = AppEstudarRouteImport.update({
+  id: '/estudar',
+  path: '/estudar',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProgressoRoute = AppProgressoRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
+  '/estudar': typeof AppEstudarRoute
   '/progresso': typeof AppProgressoRoute
   '/decks/labels': typeof AppDecksLabelsRoute
   '/decks/novo': typeof AppDecksNovoRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
+  '/estudar': typeof AppEstudarRoute
   '/progresso': typeof AppProgressoRoute
   '/': typeof AppIndexRoute
   '/decks/labels': typeof AppDecksLabelsRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
+  '/_app/estudar': typeof AppEstudarRoute
   '/_app/progresso': typeof AppProgressoRoute
   '/_app/': typeof AppIndexRoute
   '/_app/decks/labels': typeof AppDecksLabelsRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/privacidade'
     | '/configuracoes'
+    | '/estudar'
     | '/progresso'
     | '/decks/labels'
     | '/decks/novo'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/privacidade'
     | '/configuracoes'
+    | '/estudar'
     | '/progresso'
     | '/'
     | '/decks/labels'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/privacidade'
     | '/_app/configuracoes'
+    | '/_app/estudar'
     | '/_app/progresso'
     | '/_app/'
     | '/_app/decks/labels'
@@ -233,6 +245,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/estudar': {
+      id: '/_app/estudar'
+      path: '/estudar'
+      fullPath: '/estudar'
+      preLoaderRoute: typeof AppEstudarRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/progresso': {
@@ -303,6 +322,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppEstudarRoute: typeof AppEstudarRoute
   AppProgressoRoute: typeof AppProgressoRoute
   AppIndexRoute: typeof AppIndexRoute
   AppDecksLabelsRoute: typeof AppDecksLabelsRoute
@@ -317,6 +337,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppEstudarRoute: AppEstudarRoute,
   AppProgressoRoute: AppProgressoRoute,
   AppIndexRoute: AppIndexRoute,
   AppDecksLabelsRoute: AppDecksLabelsRoute,

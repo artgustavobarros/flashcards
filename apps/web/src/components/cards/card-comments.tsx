@@ -62,7 +62,13 @@ const textarea =
   "w-full resize-none bg-transparent text-base outline-none placeholder:text-muted-foreground [field-sizing:content] md:text-sm";
 
 // The Comments at the end of the Card page: oldest on top, edited in place, the field below.
-export function CardComments({ cardId }: { cardId: string }) {
+export function CardComments({
+  cardId,
+  embedded = false,
+}: {
+  cardId: string;
+  embedded?: boolean;
+}) {
   const queryClient = useQueryClient();
   const comments = useQuery(commentsQuery(cardId)).data?.comments;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -105,17 +111,27 @@ export function CardComments({ cardId }: { cardId: string }) {
   );
 
   return (
-    <section className="mt-8">
-      <h3 className="mb-3 font-heading font-semibold text-lg">
-        Comments{" "}
-        {comments?.length ? (
-          <span className="text-muted-foreground tabular-nums">
-            {comments.length}
-          </span>
-        ) : null}
-      </h3>
+    <section
+      className={embedded ? "flex min-h-0 flex-1 flex-col pt-4" : "mt-8"}
+    >
+      {embedded ? null : (
+        <h3 className="mb-3 font-heading font-semibold text-lg">
+          Comments{" "}
+          {comments?.length ? (
+            <span className="text-muted-foreground tabular-nums">
+              {comments.length}
+            </span>
+          ) : null}
+        </h3>
+      )}
       {comments?.length ? (
-        <ol className="space-y-2.5">
+        <ol
+          className={
+            embedded
+              ? "min-h-0 flex-1 space-y-2.5 overflow-y-auto"
+              : "space-y-2.5"
+          }
+        >
           {comments.map((comment) =>
             comment.id === editingId ? (
               <li key={comment.id}>
@@ -156,7 +172,13 @@ export function CardComments({ cardId }: { cardId: string }) {
         </ol>
       ) : null}
       {comments && !comments.length ? (
-        <p className="rounded-lg border border-dashed px-4 py-6 text-center text-muted-foreground text-sm">
+        <p
+          className={
+            embedded
+              ? "flex flex-1 items-center justify-center rounded-lg border border-dashed px-4 py-6 text-center text-muted-foreground text-sm"
+              : "rounded-lg border border-dashed px-4 py-6 text-center text-muted-foreground text-sm"
+          }
+        >
           Nenhum Comment ainda. Anote uma dica, uma fonte ou o que confundiu
           você.
         </p>

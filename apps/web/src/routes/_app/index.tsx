@@ -1,9 +1,13 @@
 import type { Health } from "@daruma/shared";
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CalendarCheck } from "lucide-react";
+import { useCallback } from "react";
 import { EmptyState } from "~/components/empty-state";
-import { getHealth } from "~/lib/api";
+import { Button } from "~/components/ui/button";
+import { getHealth, getStudyQueue } from "~/lib/api";
+import { plural } from "~/lib/schedule";
+import { clearStudy } from "~/lib/study-storage";
 
 export const Route = createFileRoute("/_app/")({
   component: Home,
@@ -23,6 +27,15 @@ function healthText(health: UseQueryResult<Health>) {
 
 function Home() {
   const health = useQuery({ queryFn: getHealth, queryKey: ["health"] });
+  const daily = useQuery({
+    queryFn: () => getStudyQueue({ origin: "daily" }),
+    queryKey: ["study-queue", "home"],
+  });
+  const navigate = useNavigate();
+  const startStudy = useCallback(() => {
+    clearStudy();
+    navigate({ search: { origem: "daily" }, to: "/estudar" });
+  }, [navigate]);
 
   return (
     <div className="space-y-6">
@@ -31,8 +44,16 @@ function Home() {
       </h2>
       <EmptyState
         icon={CalendarCheck}
-        title="A revisão de hoje aparece aqui."
-      />
+        title={
+          daily.data?.cards.length
+            ? `Revisão de hoje: ${plural(daily.data.cards.length, "Card", "Cards")}`
+            : "A revisão de hoje aparece aqui."
+        }
+      >
+        {daily.data?.cards.length ? (
+          <Button onClick={startStudy}>Começar</Button>
+        ) : null}
+      </EmptyState>
       <p className="text-muted-foreground text-xs" data-testid="health">
         {healthText(health)}
       </p>

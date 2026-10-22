@@ -274,6 +274,35 @@ describe("study queue", () => {
     ]);
   });
 
+  test("legacy due Cards without a last review still enter the queue", async () => {
+    const legacy = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("legacy"),
+    });
+    const other = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("other"),
+    });
+    await Promise.all(
+      [legacy.id, other.id].map((id) =>
+        db
+          .update(cards)
+          .set({ due: "2026-10-20", scheduledDays: 2, state: State.Review })
+          .where(eq(cards.id, id))
+      )
+    );
+
+    const queue = await service.studyQueue(
+      userId,
+      { deckId, origin: "deck" },
+      "2026-10-22"
+    );
+
+    expect(queue.map((card) => card.id)).toHaveLength(2);
+  });
+
   test("Deck study takes only due Cards from that Deck", async () => {
     const due = await service.create(userId, {
       answer: doc("a"),
