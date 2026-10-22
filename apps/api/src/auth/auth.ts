@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { Db } from "../db/db.module.js";
+import { userSettings } from "../db/domain-schema.js";
 import { authUrl, env, googleCredentials } from "../env.js";
 import { devLogin } from "./dev-login.js";
 
@@ -33,6 +34,17 @@ export function createAuth(db: Db) {
     databaseHooks: {
       account: {
         create: { before: async (account) => withoutGoogleTokens(account) },
+      },
+      // Every account has a settings row from the start; the columns hold the defaults.
+      user: {
+        create: {
+          after: async (user) => {
+            await db
+              .insert(userSettings)
+              .values({ userId: user.id })
+              .onConflictDoNothing();
+          },
+        },
       },
     },
     plugins: env.DEV_LOGIN ? [devLogin()] : [],

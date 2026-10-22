@@ -10,6 +10,7 @@
     "db:studio": "drizzle-kit studio",
     "dev": "nest start --watch --preserveWatchOutput",
     "start": "node dist/main.js",
+    "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "ts-fsrs": "5.4.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -32,6 +34,7 @@
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.11",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
   }
 }

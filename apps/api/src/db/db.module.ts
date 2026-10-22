@@ -8,10 +8,14 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { env } from "../env.js";
 // biome-ignore lint/performance/noNamespaceImport: Drizzle takes the whole schema module.
-import * as schema from "./schema.js";
+import * as domainSchema from "./domain-schema.js";
+// biome-ignore lint/performance/noNamespaceImport: Drizzle takes the whole schema module.
+import * as authSchema from "./schema.js";
 
 export const DB = Symbol("DB");
 const POOL = Symbol("POOL");
+
+export const schema = { ...authSchema, ...domainSchema };
 
 export type Db = NodePgDatabase<typeof schema>;
 

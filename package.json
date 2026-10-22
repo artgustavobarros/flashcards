@@ -10,6 +10,7 @@
     "predev": "pnpm --filter @daruma/shared build",
     "dev": "pnpm --parallel --filter @daruma/shared --filter @daruma/api --filter @daruma/web dev",
     "fix": "ultracite fix",
+    "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
