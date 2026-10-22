@@ -35,6 +35,10 @@ Better Auth runs inside Nest (`apps/api/src/auth`), mounted on `/api/auth`. The 
 
 A Card's question and answer are Tiptap JSON, validated by `richTextSchema` in `packages/shared` and stored with their plain text (for search and list previews). Deleting a Deck or a Card is a soft delete; `POST /api/decks/:id/restore` and `POST /api/cards/:id/restore` back the toast's "Desfazer".
 
+`GET /api/cards` filters by `deckId`, `labelId`, `state` (`new`, `learning`, `mature`) and `due=today` (overdue included), and `q` searches the question, the answer and the Comments, ignoring accents and case (Postgres `unaccent`). The selection actions are `POST /api/cards/move`, `/label`, `/delete` and `/restore`, each with a list of `cardIds`; one missing Card fails the whole request.
+
+Labels (`/api/labels`) can't share a name, even with other accents, case or spacing. Comments are listed and written under their Card (`/api/cards/:id/comments`) and edited or deleted at `/api/comments/:id`. Labels and Comments are soft-deleted too, with the same `restore` routes.
+
 Images are uploaded with `POST /api/images` (multipart, field `file`, PNG/JPG/WebP/GIF up to 5 MB, type read from the bytes) and saved under `UPLOADS_DIR/<user id>/`. `GET /api/images/<file>` only looks in the signed-in user's folder, which is the owner check.
 
 ## Scripts

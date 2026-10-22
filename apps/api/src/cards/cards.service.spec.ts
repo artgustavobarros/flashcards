@@ -4,8 +4,10 @@ import { eq } from "drizzle-orm";
 import { State } from "ts-fsrs";
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import { connect, createUser } from "../../test/db.js";
+import { CommentsService } from "../comments/comments.service.js";
 import { cards, decks } from "../db/domain-schema.js";
 import { DecksService } from "../decks/decks.service.js";
+import { LabelsService } from "../labels/labels.service.js";
 import { CardsService } from "./cards.service.js";
 
 const { db, pool } = connect();
@@ -143,11 +145,11 @@ describe("remove and restore", () => {
       question: doc("q"),
     });
 
-    await service.remove(userId, id);
+    await service.remove(userId, [id]);
     expect(await service.list(userId, { deckId })).toEqual([]);
     await expect(service.get(userId, id)).rejects.toThrow(NotFoundException);
 
-    await service.restore(userId, id);
+    await service.restore(userId, [id]);
     expect(await service.list(userId, { deckId })).toMatchObject([{ id }]);
   });
 
@@ -157,10 +159,10 @@ describe("remove and restore", () => {
       deckId,
       question: doc("q"),
     });
-    await service.remove(userId, id);
+    await service.remove(userId, [id]);
     await deckService.remove(userId, deckId);
 
-    await expect(service.restore(userId, id)).rejects.toThrow(
+    await expect(service.restore(userId, [id])).rejects.toThrow(
       NotFoundException
     );
   });
@@ -213,4 +215,204 @@ test("plain text has one line per block and keeps formulas", () => {
       type: "doc",
     })
   ).toBe("Área: \\pi r^2\nDendritos\nAxônio");
+});
+
+describe("Labels on a Card", () => {
+  test("are set on create and replaced on update, by name", async () => {
+    const labels = new LabelsService(db);
+    const ossos = await labels.create(userId, "ossos");
+    const prova = await labels.create(userId, "Prova final");
+    const { id } = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      labelIds: [prova.id, ossos.id],
+      question: doc("q"),
+    });
+    expect((await service.get(userId, id)).labels).toEqual([ossos, prova]);
+
+    await service.update(userId, id, { labelIds: [prova.id] });
+    expect((await service.get(userId, id)).labels).toEqual([prova]);
+  });
+
+  test("refuses another user's Label and saves nothing", async () => {
+    const other = await createUser(db);
+    const theirs = await new LabelsService(db).create(other, "deles");
+
+    await expect(
+      service.create(userId, {
+        answer: doc("a"),
+        deckId,
+        labelIds: [theirs.id],
+        question: doc("q"),
+      })
+    ).rejects.toThrow(new NotFoundException("Label not found."));
+    expect(await service.list(userId)).toEqual([]);
+  });
+
+  test("a deleted Label is hidden and comes back on its Cards", async () => {
+    const labels = new LabelsService(db);
+    const ossos = await labels.create(userId, "ossos");
+    const { id } = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      labelIds: [ossos.id],
+      question: doc("q"),
+    });
+
+    await labels.remove(userId, ossos.id);
+    // Saving the Card's Labels meanwhile doesn't drop the deleted one.
+    await service.update(userId, id, { labelIds: [] });
+    expect((await service.get(userId, id)).labels).toEqual([]);
+
+    await labels.restore(userId, ossos.id);
+    expect((await service.get(userId, id)).labels).toEqual([ossos]);
+  });
+});
+
+describe("list filters", () => {
+  const card = async (
+    text: string,
+    schedule: Partial<typeof cards.$inferInsert> = {}
+  ) => {
+    const { id } = await service.create(userId, {
+      answer: doc(`resposta ${text}`),
+      deckId,
+      question: doc(text),
+    });
+    if (Object.keys(schedule).length) {
+      await db.update(cards).set(schedule).where(eq(cards.id, id));
+    }
+    return id;
+  };
+  const ids = async (query: Parameters<CardsService["list"]>[1]) =>
+    (await service.list(userId, query, "2026-10-21")).map(
+      (row) => row.questionText
+    );
+
+  test("by state and due today, overdue included", async () => {
+    await card("novo");
+    await card("atrasado", {
+      due: "2026-10-19",
+      scheduledDays: 3,
+      state: State.Review,
+    });
+    await card("hoje", {
+      due: "2026-10-21",
+      scheduledDays: 30,
+      state: State.Review,
+    });
+    await card("depois", {
+      due: "2026-10-22",
+      scheduledDays: 5,
+      state: State.Review,
+    });
+
+    expect(await ids({ state: "new" })).toEqual(["novo"]);
+    expect(await ids({ state: "learning" })).toEqual(["atrasado", "depois"]);
+    expect(await ids({ state: "mature" })).toEqual(["hoje"]);
+    expect(await ids({ due: "today" })).toEqual(["atrasado", "hoje"]);
+    expect(await ids({ due: "today", state: "learning" })).toEqual([
+      "atrasado",
+    ]);
+  });
+
+  test("by Label", async () => {
+    const ossos = await new LabelsService(db).create(userId, "ossos");
+    const marked = await card("marcado");
+    await card("solto");
+    await service.labelAll(userId, [marked], ossos.id, true);
+
+    expect(await ids({ labelId: ossos.id })).toEqual(["marcado"]);
+  });
+
+  test("search ignores accents and case, in question, answer and Comments", async () => {
+    const musculo = await card("Qual MÚSCULO estende o cotovelo?");
+    await card("Quantos ossos?");
+    const viaComment = await card("Onde nasce o impulso?");
+    const comments = new CommentsService(db);
+    await comments.create(userId, viaComment, "Primeiro Comment");
+    await comments.create(userId, viaComment, "Ver o nó atrioventricular");
+    await comments.create(userId, musculo, "nó também aqui");
+
+    expect(await ids({ q: "musculo" })).toEqual([
+      "Qual MÚSCULO estende o cotovelo?",
+    ]);
+    expect(await ids({ q: "resposta quantos" })).toEqual(["Quantos ossos?"]);
+
+    const rows = await service.list(userId, { q: "NO" }, "2026-10-21");
+    expect(
+      rows.map((row) => [
+        row.questionText,
+        row.matchedComment,
+        row.commentCount,
+      ])
+    ).toEqual([
+      ["Qual MÚSCULO estende o cotovelo?", "nó também aqui", 1],
+      // Only its second Comment has the term.
+      ["Onde nasce o impulso?", "Ver o nó atrioventricular", 2],
+    ]);
+  });
+});
+
+describe("selection actions", () => {
+  const two = async () => [
+    (
+      await service.create(userId, {
+        answer: doc("a"),
+        deckId,
+        question: doc("1"),
+      })
+    ).id,
+    (
+      await service.create(userId, {
+        answer: doc("a"),
+        deckId,
+        question: doc("2"),
+      })
+    ).id,
+  ];
+
+  test("move keeps the schedule and is all or nothing", async () => {
+    const [first, second] = (await two()) as [string, string];
+    const target = await newDeck("Ossos");
+    await service.remove(userId, [second]);
+
+    await expect(service.move(userId, [first, second], target)).rejects.toThrow(
+      NotFoundException
+    );
+    expect((await service.get(userId, first)).deckId).toBe(deckId);
+
+    await service.restore(userId, [second]);
+    await service.move(userId, [first, second], target);
+    expect(await service.list(userId, { deckId: target })).toHaveLength(2);
+  });
+
+  test("delete and restore several Cards", async () => {
+    const both = await two();
+    await service.remove(userId, both);
+    expect(await service.list(userId)).toEqual([]);
+
+    await service.restore(userId, both);
+    expect(await service.list(userId)).toHaveLength(2);
+  });
+
+  test("a Label goes on and off every Card", async () => {
+    const both = await two();
+    const ossos = await new LabelsService(db).create(userId, "ossos");
+    await service.labelAll(userId, [both[0] as string], ossos.id, true);
+
+    await service.labelAll(userId, both, ossos.id, true);
+    expect(await service.list(userId, { labelId: ossos.id })).toHaveLength(2);
+
+    await service.labelAll(userId, both, ossos.id, false);
+    expect(await service.list(userId, { labelId: ossos.id })).toEqual([]);
+  });
+
+  test("refuses another user's Cards", async () => {
+    const both = await two();
+    const other = await createUser(db);
+    await expect(service.remove(other, both)).rejects.toThrow(
+      NotFoundException
+    );
+  });
 });

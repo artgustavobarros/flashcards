@@ -22,7 +22,7 @@ const scheduler = fsrs(
 );
 
 // Shown as Maduro from this interval on, Em aprendizado below it.
-const MATURE_DAYS = 21;
+export const MATURE_DAYS = 21;
 
 // The FSRS columns of a Card. A New Card has no due Day and no last review.
 export interface Schedule {
