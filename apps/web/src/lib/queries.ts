@@ -1,14 +1,8 @@
-import {
-  keepPreviousData,
-  type QueryClient,
-  queryOptions,
-} from "@tanstack/react-query";
-import type { CardsQuery } from "@daruma/shared";
-import { getCard, getCards, getDeck, getDecks, getLabels } from "~/lib/api";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { getCard, getCards, getDeck, getDecks } from "~/lib/api";
 
-// Keys: ["decks"] for every Deck query, ["cards"] for every Card query, ["labels"] for Labels.
-// Any change to a Card moves Deck and Label counts too, so mutations refresh all three
-// (see refreshLibrary).
+// Keys: ["decks"] for every Deck query, ["cards"] for every Card query. Any change to a Card
+// moves Deck counts too, so mutations refresh both (see refreshLibrary).
 export const decksQuery = queryOptions({
   queryFn: getDecks,
   queryKey: ["decks"],
@@ -20,18 +14,11 @@ export const deckQuery = (id: string) =>
     queryKey: ["decks", id],
   });
 
-// A list keeps showing the previous result while the next search or filter loads.
-export const cardsQuery = (query: CardsQuery) =>
+export const deckCardsQuery = (deckId: string) =>
   queryOptions({
-    placeholderData: keepPreviousData,
-    queryFn: () => getCards(query),
-    queryKey: ["cards", "list", query],
+    queryFn: () => getCards({ deckId }),
+    queryKey: ["cards", "list", { deckId }],
   });
-
-export const labelsQuery = queryOptions({
-  queryFn: getLabels,
-  queryKey: ["labels"],
-});
 
 export const cardQuery = (id: string) =>
   queryOptions({
@@ -43,6 +30,5 @@ export function refreshLibrary(queryClient: QueryClient) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ["decks"] }),
     queryClient.invalidateQueries({ queryKey: ["cards"] }),
-    queryClient.invalidateQueries({ queryKey: ["labels"] }),
   ]);
 }
