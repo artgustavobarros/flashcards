@@ -6,22 +6,44 @@ import { AccountMenu } from "./account-menu";
 import { BellMenu } from "./bell-menu";
 import { NAV } from "./nav";
 import { NewMenu, NewSheet } from "./new-menu";
-
-// Mobile shows the page title in the header, so each route sets staticData.title.
-function usePageTitle() {
-  return routeTitle(useMatches()) ?? "Daruma";
-}
+import {
+  MobileBackTitle,
+  type PageHeader,
+  PageHeaderProvider,
+} from "./page-header";
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const title = usePageTitle();
+  return (
+    <PageHeaderProvider>
+      {(header) => <Shell header={header}>{children}</Shell>}
+    </PageHeaderProvider>
+  );
+}
+
+// Mobile shows the page title in the header, so each route sets staticData.title, or a sub-page
+// calls usePageHeader.
+function Shell({
+  children,
+  header,
+}: {
+  children: ReactNode;
+  header: PageHeader | null;
+}) {
+  const matches = useMatches();
+  const title = routeTitle(matches) ?? "Daruma";
+  const hideNew = matches.some((match) => match.staticData.hideNew);
 
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:h-20 md:px-6">
-          <h1 className="truncate font-heading font-semibold text-2xl md:hidden">
-            {title}
-          </h1>
+          {header ? (
+            <MobileBackTitle header={header} />
+          ) : (
+            <h1 className="truncate font-heading font-semibold text-2xl md:hidden">
+              {title}
+            </h1>
+          )}
           <Link className="hidden md:inline-flex" to="/">
             <DarumaLogo />
           </Link>
@@ -75,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </div>
       </nav>
-      <NewSheet />
+      {hideNew ? null : <NewSheet />}
     </div>
   );
 }

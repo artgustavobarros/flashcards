@@ -1,13 +1,16 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+// With a description, the title reads as a heading above it (prototype/decks.html).
 export function EmptyState({
   icon: Icon,
   title,
+  description,
   children,
 }: {
   icon: LucideIcon;
   title: string;
+  description?: string;
   children?: ReactNode;
 }) {
   return (
@@ -15,7 +18,16 @@ export function EmptyState({
       <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
         <Icon className="size-6" />
       </span>
-      <p className="max-w-xs text-muted-foreground text-sm">{title}</p>
+      {description ? (
+        <div className="space-y-1">
+          <p className="font-medium">{title}</p>
+          <p className="max-w-sm text-muted-foreground text-sm">
+            {description}
+          </p>
+        </div>
+      ) : (
+        <p className="max-w-xs text-muted-foreground text-sm">{title}</p>
+      )}
       {children}
     </div>
   );

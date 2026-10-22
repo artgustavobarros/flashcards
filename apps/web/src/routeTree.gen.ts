@@ -14,8 +14,10 @@ import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
-import { Route as AppDecksRouteImport } from './routes/_app/decks'
 import { Route as AppProgressoRouteImport } from './routes/_app/progresso'
+import { Route as AppDecksIndexRouteImport } from './routes/_app/decks/index'
+import { Route as AppDecksDeckIdIndexRouteImport } from './routes/_app/decks/$deckId/index'
+import { Route as AppDecksCardsCardIdIndexRouteImport } from './routes/_app/decks/cards/$cardId/index'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -41,32 +43,47 @@ const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => AppRoute,
 } as any)
-const AppDecksRoute = AppDecksRouteImport.update({
-  id: '/decks',
-  path: '/decks',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppProgressoRoute = AppProgressoRouteImport.update({
   id: '/progresso',
   path: '/progresso',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDecksIndexRoute = AppDecksIndexRouteImport.update({
+  id: '/decks/',
+  path: '/decks/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDecksDeckIdIndexRoute = AppDecksDeckIdIndexRouteImport.update({
+  id: '/decks/$deckId/',
+  path: '/decks/$deckId/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDecksCardsCardIdIndexRoute =
+  AppDecksCardsCardIdIndexRouteImport.update({
+    id: '/decks/cards/$cardId/',
+    path: '/decks/cards/$cardId/',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
-  '/decks': typeof AppDecksRoute
   '/progresso': typeof AppProgressoRoute
+  '/decks/': typeof AppDecksIndexRoute
+  '/decks/$deckId/': typeof AppDecksDeckIdIndexRoute
+  '/decks/cards/$cardId/': typeof AppDecksCardsCardIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
-  '/decks': typeof AppDecksRoute
   '/progresso': typeof AppProgressoRoute
   '/': typeof AppIndexRoute
+  '/decks': typeof AppDecksIndexRoute
+  '/decks/$deckId': typeof AppDecksDeckIdIndexRoute
+  '/decks/cards/$cardId': typeof AppDecksCardsCardIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -74,9 +91,11 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
-  '/_app/decks': typeof AppDecksRoute
   '/_app/progresso': typeof AppProgressoRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/decks/': typeof AppDecksIndexRoute
+  '/_app/decks/$deckId/': typeof AppDecksDeckIdIndexRoute
+  '/_app/decks/cards/$cardId/': typeof AppDecksCardsCardIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -85,25 +104,31 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/privacidade'
     | '/configuracoes'
-    | '/decks'
     | '/progresso'
+    | '/decks/'
+    | '/decks/$deckId/'
+    | '/decks/cards/$cardId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/entrar'
     | '/privacidade'
     | '/configuracoes'
-    | '/decks'
     | '/progresso'
     | '/'
+    | '/decks'
+    | '/decks/$deckId'
+    | '/decks/cards/$cardId'
   id:
     | '__root__'
     | '/_app'
     | '/entrar'
     | '/privacidade'
     | '/_app/configuracoes'
-    | '/_app/decks'
     | '/_app/progresso'
     | '/_app/'
+    | '/_app/decks/'
+    | '/_app/decks/$deckId/'
+    | '/_app/decks/cards/$cardId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -149,13 +174,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/decks': {
-      id: '/_app/decks'
-      path: '/decks'
-      fullPath: '/decks'
-      preLoaderRoute: typeof AppDecksRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/progresso': {
       id: '/_app/progresso'
       path: '/progresso'
@@ -163,21 +181,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProgressoRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/decks/': {
+      id: '/_app/decks/'
+      path: '/decks'
+      fullPath: '/decks/'
+      preLoaderRoute: typeof AppDecksIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/decks/$deckId/': {
+      id: '/_app/decks/$deckId/'
+      path: '/decks/$deckId'
+      fullPath: '/decks/$deckId/'
+      preLoaderRoute: typeof AppDecksDeckIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/decks/cards/$cardId/': {
+      id: '/_app/decks/cards/$cardId/'
+      path: '/decks/cards/$cardId'
+      fullPath: '/decks/cards/$cardId/'
+      preLoaderRoute: typeof AppDecksCardsCardIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
-  AppDecksRoute: typeof AppDecksRoute
   AppProgressoRoute: typeof AppProgressoRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppDecksIndexRoute: typeof AppDecksIndexRoute
+  AppDecksDeckIdIndexRoute: typeof AppDecksDeckIdIndexRoute
+  AppDecksCardsCardIdIndexRoute: typeof AppDecksCardsCardIdIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesRoute: AppConfiguracoesRoute,
-  AppDecksRoute: AppDecksRoute,
   AppProgressoRoute: AppProgressoRoute,
   AppIndexRoute: AppIndexRoute,
+  AppDecksIndexRoute: AppDecksIndexRoute,
+  AppDecksDeckIdIndexRoute: AppDecksDeckIdIndexRoute,
+  AppDecksCardsCardIdIndexRoute: AppDecksCardsCardIdIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

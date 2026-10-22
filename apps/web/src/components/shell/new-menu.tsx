@@ -45,6 +45,11 @@ function notifyUnavailable(event: { currentTarget: EventTarget | null }) {
   }
 }
 
+// Until the Card editor exists.
+export function notifyEditorSoon() {
+  toast("O editor de Cards ainda não existe.");
+}
+
 function OptionBody({ option }: { option: Option }) {
   return (
     <>
