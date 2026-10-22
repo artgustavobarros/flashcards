@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/biome/core"],
+  "files": {
+    // Agent skill kits, the throwaway prototype and generated code are not ours to lint.
+    "includes": [
+      "!.agents",
+      "!.claude",
+      "!.codex",
+      "!.scratch",
+      "!prototype",
+      "!**/routeTree.gen.ts"
+    ]
+  }
+}

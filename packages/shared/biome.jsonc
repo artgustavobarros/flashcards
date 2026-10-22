@@ -1,0 +1,11 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/biome/core", "../../biome.jsonc"],
+  "root": false,
+  "linter": {
+    "rules": {
+      // src/index.ts is the package entry point both apps import from.
+      "performance": { "noBarrelFile": "off" }
+    }
+  }
+}

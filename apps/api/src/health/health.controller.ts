@@ -12,9 +12,9 @@ export class HealthController {
   async check(): Promise<Health> {
     try {
       await this.db.execute(sql`select 1`);
-      return { status: "ok", db: "up" };
+      return { db: "up", status: "ok" };
     } catch {
-      return { status: "ok", db: "down" };
+      return { db: "down", status: "ok" };
     }
   }
 }
