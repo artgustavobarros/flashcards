@@ -17,3 +17,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Card images uploaded in local dev
+apps/api/uploads/
