@@ -3,11 +3,12 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { State } from "ts-fsrs";
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
-import { connect, createUser } from "../../test/db.js";
+import { connect, createCard, createUser } from "../../test/db.js";
 import { CommentsService } from "../comments/comments.service.js";
-import { cards, decks } from "../db/domain-schema.js";
+import { cards, decks, userSettings } from "../db/domain-schema.js";
 import { DecksService } from "../decks/decks.service.js";
 import { LabelsService } from "../labels/labels.service.js";
+import { SchedulingService } from "../scheduling/scheduling.service.js";
 import { CardsService } from "./cards.service.js";
 
 const { db, pool } = connect();
@@ -191,6 +192,164 @@ describe("list", () => {
     expect(rows.map((row) => row.id)).toEqual([first.id, second.id]);
     expect(await service.list(userId)).toHaveLength(3);
   });
+});
+
+describe("study queue", () => {
+  test("daily review takes due Cards and only the remaining New Card allowance", async () => {
+    const old = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("old"),
+    });
+    const first = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("first"),
+    });
+    const second = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("second"),
+    });
+    await db
+      .update(userSettings)
+      .set({ newCardsPerDay: 1 })
+      .where(eq(userSettings.userId, userId));
+    await db
+      .update(cards)
+      .set({ due: "2026-10-21", scheduledDays: 2, state: State.Review })
+      .where(eq(cards.id, old.id));
+
+    const queue = await service.studyQueue(
+      userId,
+      { origin: "daily" },
+      "2026-10-22"
+    );
+
+    expect(queue.map((card) => card.id)).toEqual([old.id, first.id]);
+    expect(queue[0]?.question).toEqual(doc("old"));
+    expect(queue.map((card) => card.id)).not.toContain(second.id);
+  });
+
+  test("due Cards with lower retrievability come first", async () => {
+    const easier = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("easier"),
+    });
+    const harder = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("harder"),
+    });
+    await Promise.all(
+      (
+        [
+          [easier.id, 20],
+          [harder.id, 2],
+        ] as const
+      ).map(([id, stability]) =>
+        db
+          .update(cards)
+          .set({
+            due: "2026-10-20",
+            lastReviewedOn: "2026-10-10",
+            scheduledDays: 10,
+            stability,
+            state: State.Review,
+          })
+          .where(eq(cards.id, id))
+      )
+    );
+
+    const queue = await service.studyQueue(
+      userId,
+      { origin: "daily" },
+      "2026-10-22"
+    );
+
+    expect(queue.slice(0, 2).map((card) => card.id)).toEqual([
+      harder.id,
+      easier.id,
+    ]);
+  });
+
+  test("Deck study takes only due Cards from that Deck", async () => {
+    const due = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("due"),
+    });
+    await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("new"),
+    });
+    await db
+      .update(cards)
+      .set({ due: "2026-10-22", scheduledDays: 2, state: State.Review })
+      .where(eq(cards.id, due.id));
+
+    const queue = await service.studyQueue(
+      userId,
+      { deckId, origin: "deck" },
+      "2026-10-22"
+    );
+
+    expect(queue.map((card) => card.id)).toEqual([due.id]);
+  });
+
+  test("batch keeps its creation order and rejects foreign Cards", async () => {
+    const first = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("first"),
+    });
+    const second = await service.create(userId, {
+      answer: doc("a"),
+      deckId,
+      question: doc("second"),
+    });
+    const other = await createUser(db);
+    const foreign = await createCard(db, other);
+
+    expect(
+      (
+        await service.studyQueue(
+          userId,
+          { cardIds: [second.id, first.id], origin: "batch" },
+          "2026-10-22"
+        )
+      ).map((card) => card.id)
+    ).toEqual([second.id, first.id]);
+    await expect(
+      service.studyQueue(
+        userId,
+        { cardIds: [first.id, foreign], origin: "batch" },
+        "2026-10-22"
+      )
+    ).rejects.toThrow(NotFoundException);
+  });
+});
+
+test("a reset Card shows when its schedule was restarted", async () => {
+  const { id } = await service.create(userId, {
+    answer: doc("a"),
+    deckId,
+    question: doc("q"),
+  });
+  const scheduling = new SchedulingService(
+    db,
+    () => new Date("2026-10-23T00:00:00Z")
+  );
+  expect((await service.get(userId, id)).resetAt).toBeNull();
+
+  await scheduling.rate(userId, id, 3, 1000);
+  await scheduling.reset(userId, id);
+
+  expect((await service.get(userId, id)).resetAt).toBe(
+    "2026-10-23T00:00:00.000Z"
+  );
 });
 
 test("plain text has one line per block and keeps formulas", () => {

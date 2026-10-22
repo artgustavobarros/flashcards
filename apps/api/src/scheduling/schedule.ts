@@ -53,20 +53,7 @@ export function nextSchedule(
   today: Day
 ): Schedule {
   const now = dayStart(today);
-  const card: FsrsCard = {
-    difficulty: schedule.difficulty,
-    due: schedule.due ? dayStart(schedule.due) : now,
-    elapsed_days: 0,
-    lapses: schedule.lapses,
-    last_review: schedule.lastReviewedOn
-      ? dayStart(schedule.lastReviewedOn)
-      : undefined,
-    learning_steps: 0,
-    reps: schedule.reps,
-    scheduled_days: schedule.scheduledDays,
-    stability: schedule.stability,
-    state: schedule.state,
-  };
+  const card = fsrsCard(schedule, today);
   const next = scheduler.next(card, now, rating).card;
   return {
     difficulty: next.difficulty,
@@ -80,6 +67,31 @@ export function nextSchedule(
     state: next.state,
   };
 }
+
+function fsrsCard(schedule: Schedule, today: Day): FsrsCard {
+  const now = dayStart(today);
+  return {
+    difficulty: schedule.difficulty,
+    due: schedule.due ? dayStart(schedule.due) : now,
+    elapsed_days: 0,
+    lapses: schedule.lapses,
+    last_review: schedule.lastReviewedOn
+      ? dayStart(schedule.lastReviewedOn)
+      : undefined,
+    learning_steps: 0,
+    reps: schedule.reps,
+    scheduled_days: schedule.scheduledDays,
+    stability: schedule.stability,
+    state: schedule.state,
+  };
+}
+
+export const retrievability = (schedule: Schedule, today: Day) =>
+  scheduler.get_retrievability(
+    fsrsCard(schedule, today),
+    dayStart(today),
+    false
+  );
 
 export type CardState = "new" | "learning" | "mature";
 
