@@ -12,6 +12,13 @@ import {
   createCardResponseSchema,
   type MoveCardsBody,
   moveCardsBodySchema,
+  type RatingBody,
+  ratingBodySchema,
+  ratingResponseSchema,
+  resetResponseSchema,
+  type StudyQueueBody,
+  studyQueueBodySchema,
+  studyQueueResponseSchema,
   type UpdateCardBody,
   updateCardBodySchema,
 } from "@daruma/shared";
@@ -75,6 +82,46 @@ export class CardsController {
     return createCardResponseSchema.parse({
       card: await this.cards.create(user.id, body),
     });
+  }
+
+  @Post("study-queue")
+  async studyQueue(
+    @CurrentSession() { user }: AuthSession,
+    @Body(new ZodPipe(studyQueueBodySchema)) body: StudyQueueBody
+  ) {
+    const today = await this.scheduling.today(user.id);
+    return studyQueueResponseSchema.parse({
+      cards: await this.cards.studyQueue(user.id, body, today),
+      today,
+    });
+  }
+
+  @Post(":id/ratings")
+  async rate(
+    @CurrentSession() { user }: AuthSession,
+    @Param("id", uuid) id: string,
+    @Body(new ZodPipe(ratingBodySchema)) body: RatingBody
+  ) {
+    const result = await this.scheduling.rate(
+      user.id,
+      id,
+      body.rating,
+      body.durationMs
+    );
+    return ratingResponseSchema.parse({
+      affectsSchedule: result.affectsSchedule,
+      due: result.schedule.due,
+      reviewId: result.reviewId,
+    });
+  }
+
+  @Post(":id/schedule-reset")
+  async resetSchedule(
+    @CurrentSession() { user }: AuthSession,
+    @Param("id", uuid) id: string
+  ) {
+    const result = await this.scheduling.reset(user.id, id);
+    return resetResponseSchema.parse({ reviewId: result.reviewId });
   }
 
   @Patch(":id")

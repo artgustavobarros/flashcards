@@ -7,6 +7,7 @@ import {
   type CreateCardBody,
   hasContent,
   type RichText,
+  type StudyQueueBody,
   toPlainText,
   type UpdateCardBody,
 } from "@daruma/shared";
@@ -19,6 +20,7 @@ import {
 import {
   and,
   asc,
+  count,
   eq,
   exists,
   inArray,
@@ -40,8 +42,14 @@ import {
   comments,
   decks,
   labels,
+  reviews,
+  userSettings,
 } from "../db/domain-schema.js";
-import { cardState, MATURE_DAYS } from "../scheduling/schedule.js";
+import {
+  cardState,
+  MATURE_DAYS,
+  retrievability,
+} from "../scheduling/schedule.js";
 import type { Day } from "../scheduling/today.js";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -191,6 +199,11 @@ export class CardsService {
         ...summaryColumns,
         answer: cards.answer,
         question: cards.question,
+        resetAt: sql<
+          string | null
+        >`(select max(${reviews.reviewedAt}) from ${reviews} where ${reviews.cardId} = ${cards.id} and ${reviews.kind} = 'reset')`.as(
+          "reset_at"
+        ),
       })
       .from(cards)
       .innerJoin(decks, eq(decks.id, cards.deckId))
@@ -202,7 +215,121 @@ export class CardsService {
       ...withState(row),
       answer: row.answer as RichText,
       question: row.question as RichText,
+      resetAt: row.resetAt ? new Date(row.resetAt).toISOString() : null,
     };
+  }
+
+  async studyQueue(
+    userId: string,
+    body: StudyQueueBody,
+    today: Day
+  ): Promise<Card[]> {
+    if (body.origin === "batch") {
+      const rows = await this.db
+        .select({ id: cards.id, state: cards.state })
+        .from(cards)
+        .innerJoin(decks, eq(decks.id, cards.deckId))
+        .where(
+          and(
+            this.liveCards(userId),
+            isNull(decks.deletedAt),
+            inArray(cards.id, body.cardIds)
+          )
+        );
+      if (
+        rows.length !== body.cardIds.length ||
+        rows.some((row) => row.state !== State.New)
+      ) {
+        throw new NotFoundException("Card not found.");
+      }
+      return Promise.all(body.cardIds.map((id) => this.get(userId, id)));
+    }
+
+    if (body.origin === "deck") {
+      const [deck] = await this.db
+        .select({ id: decks.id })
+        .from(decks)
+        .where(
+          and(
+            eq(decks.id, body.deckId),
+            eq(decks.userId, userId),
+            isNull(decks.deletedAt)
+          )
+        );
+      if (!deck) {
+        throw new NotFoundException("Deck not found.");
+      }
+    }
+    const due = await this.db
+      .select({
+        difficulty: cards.difficulty,
+        due: cards.due,
+        id: cards.id,
+        lapses: cards.lapses,
+        lastReviewedOn: cards.lastReviewedOn,
+        reps: cards.reps,
+        scheduledDays: cards.scheduledDays,
+        stability: cards.stability,
+        state: cards.state,
+      })
+      .from(cards)
+      .innerJoin(decks, eq(decks.id, cards.deckId))
+      .where(
+        and(
+          this.liveCards(userId),
+          isNull(decks.deletedAt),
+          body.origin === "deck" ? eq(cards.deckId, body.deckId) : undefined,
+          ne(cards.state, State.New),
+          lte(cards.due, today),
+          or(isNull(cards.lastReviewedOn), ne(cards.lastReviewedOn, today))
+        )
+      )
+      .orderBy(asc(cards.due), asc(cards.id));
+    due.sort((a, b) => retrievability(a, today) - retrievability(b, today));
+    if (body.origin === "deck") {
+      return Promise.all(due.map((row) => this.get(userId, row.id)));
+    }
+
+    const [settings] = await this.db
+      .select({
+        limit: userSettings.newCardsPerDay,
+        paused: userSettings.newCardsPaused,
+      })
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId));
+    const [studied] = await this.db
+      .select({ value: count() })
+      .from(reviews)
+      .where(
+        and(
+          eq(reviews.userId, userId),
+          eq(reviews.reviewedOn, today),
+          eq(reviews.kind, "rating"),
+          eq(reviews.affectsSchedule, true),
+          eq(reviews.prevState, State.New)
+        )
+      );
+    const allowance = settings?.paused
+      ? 0
+      : Math.max(0, (settings?.limit ?? 0) - (studied?.value ?? 0));
+    const fresh = allowance
+      ? await this.db
+          .select({ id: cards.id })
+          .from(cards)
+          .innerJoin(decks, eq(decks.id, cards.deckId))
+          .where(
+            and(
+              this.liveCards(userId),
+              isNull(decks.deletedAt),
+              eq(cards.state, State.New)
+            )
+          )
+          .orderBy(asc(cards.newQueuedAt), asc(cards.id))
+          .limit(allowance)
+      : [];
+    return Promise.all(
+      [...due, ...fresh].map((row) => this.get(userId, row.id))
+    );
   }
 
   create(userId: string, body: CreateCardBody) {

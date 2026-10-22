@@ -34,6 +34,7 @@ export type CardListItem = z.infer<typeof cardListItemSchema>;
 export const cardSchema = cardSummarySchema.extend({
   answer: richTextSchema,
   question: richTextSchema,
+  resetAt: z.iso.datetime().nullable(),
 });
 export type Card = z.infer<typeof cardSchema>;
 
@@ -47,6 +48,21 @@ export const cardsQuerySchema = z.object({
   state: cardStateSchema.optional(),
 });
 export type CardsQuery = z.infer<typeof cardsQuerySchema>;
+
+// The batch carries Card ids from the editor; order is the order they were saved.
+export const studyQueueBodySchema = z.discriminatedUnion("origin", [
+  z.object({ origin: z.literal("daily") }),
+  z.object({ deckId: z.uuid(), origin: z.literal("deck") }),
+  z.object({
+    cardIds: z.array(z.uuid()).min(1).max(1000),
+    origin: z.literal("batch"),
+  }),
+]);
+export type StudyQueueBody = z.infer<typeof studyQueueBodySchema>;
+export const studyQueueResponseSchema = z.object({
+  cards: z.array(cardSchema),
+  today: daySchema,
+});
 
 // `today` is the user's local day, so due dates can be shown as "Hoje" or "Atrasado".
 export const cardsResponseSchema = z.object({

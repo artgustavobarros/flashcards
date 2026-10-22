@@ -4,4 +4,5 @@ export * from "./decks.js";
 export * from "./health.js";
 export * from "./labels.js";
 export * from "./rich-text.js";
+export * from "./study.js";
 export * from "./text.js";
