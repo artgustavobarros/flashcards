@@ -16,12 +16,20 @@ Requires Node 24, pnpm 11 and Docker.
 
 ```sh
 pnpm install
-cp apps/api/.env.example apps/api/.env
-pnpm db:up   # Postgres 17 from compose.yaml
-pnpm dev     # shared (watch) + api + web
+cp apps/api/.env.example apps/api/.env   # then fill BETTER_AUTH_SECRET
+pnpm db:up                                # Postgres 17 from compose.yaml
+pnpm --filter @daruma/api db:migrate
+pnpm dev                                  # shared (watch) + api + web
 ```
 
-Open http://localhost:3000. The page calls `GET /api/health` and shows whether the API and the database answered.
+Open http://localhost:3000. Without a session you land on `/entrar`; "Entrar como dev" signs you in as `dev@daruma.local`.
+
+## Auth
+
+Better Auth runs inside Nest (`apps/api/src/auth`), mounted on `/api/auth`. The only real way in is Google: the first sign-in creates the account. Sessions are rows in Postgres behind an httpOnly cookie on the app's origin. Every Nest route needs a session unless it is marked `@Public()`.
+
+- **Dev login**: `POST /api/auth/dev-login/sign-in` with `{ "email": "...", "name"?: "..." }` finds or creates that user and sets the cookie. It exists only when `DEV_LOGIN=true`, and the API refuses to start with it unless `NODE_ENV` is `development` or `test`. `NODE_ENV` has no default, so a container that forgets it does not boot. The login page shows its button only in Vite dev builds. E2E tests can call the endpoint directly.
+- **Google**: create an OAuth client (type "Web application") in Google Cloud Console, add `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI, and put the ID and secret in `apps/api/.env`. Without them, "Continuar com Google" shows the error alert. Outside `development` and `test` both are required.
 
 ## Scripts
 

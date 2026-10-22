@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
 import { Route as AppDecksRouteImport } from './routes/_app/decks'
@@ -17,6 +19,16 @@ import { Route as AppProgressoRouteImport } from './routes/_app/progresso'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -42,11 +54,15 @@ const AppProgressoRoute = AppProgressoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/entrar': typeof EntrarRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/decks': typeof AppDecksRoute
   '/progresso': typeof AppProgressoRoute
 }
 export interface FileRoutesByTo {
+  '/entrar': typeof EntrarRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/decks': typeof AppDecksRoute
   '/progresso': typeof AppProgressoRoute
@@ -55,6 +71,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/entrar': typeof EntrarRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/decks': typeof AppDecksRoute
   '/_app/progresso': typeof AppProgressoRoute
@@ -62,12 +80,26 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/configuracoes' | '/decks' | '/progresso'
+  fullPaths:
+    | '/'
+    | '/entrar'
+    | '/privacidade'
+    | '/configuracoes'
+    | '/decks'
+    | '/progresso'
   fileRoutesByTo: FileRoutesByTo
-  to: '/configuracoes' | '/decks' | '/progresso' | '/'
+  to:
+    | '/entrar'
+    | '/privacidade'
+    | '/configuracoes'
+    | '/decks'
+    | '/progresso'
+    | '/'
   id:
     | '__root__'
     | '/_app'
+    | '/entrar'
+    | '/privacidade'
     | '/_app/configuracoes'
     | '/_app/decks'
     | '/_app/progresso'
@@ -76,6 +108,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  EntrarRoute: typeof EntrarRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,6 +119,20 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -136,6 +184,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  EntrarRoute: EntrarRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

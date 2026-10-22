@@ -1,6 +1,7 @@
 import { Link, useMatches } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { DarumaLogo } from "~/components/daruma-mark";
+import { routeTitle } from "~/lib/route-title";
 import { AccountMenu } from "./account-menu";
 import { BellMenu } from "./bell-menu";
 import { NAV } from "./nav";
@@ -8,11 +9,7 @@ import { NewMenu, NewSheet } from "./new-menu";
 
 // Mobile shows the page title in the header, so each route sets staticData.title.
 function usePageTitle() {
-  const matches = useMatches();
-  return (
-    matches.findLast((match) => match.staticData.title)?.staticData.title ??
-    "Daruma"
-  );
+  return routeTitle(useMatches()) ?? "Daruma";
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -48,9 +45,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               <NewMenu />
             </div>
             <BellMenu />
-            <div className="hidden md:block">
-              <AccountMenu />
-            </div>
+            {/* On mobile too, unlike the prototype: it is the only way to see the account and sign out. */}
+            <AccountMenu />
           </div>
         </div>
       </header>
