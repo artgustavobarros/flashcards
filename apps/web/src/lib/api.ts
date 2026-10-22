@@ -13,7 +13,13 @@ import {
   imageResponseSchema,
   labelResponseSchema,
   labelsResponseSchema,
+  type RatingBody,
+  ratingResponseSchema,
+  resetResponseSchema,
+  type StudyQueueBody,
+  studyQueueResponseSchema,
   type UpdateCardBody,
+  undoResponseSchema,
 } from "@daruma/shared";
 import type { z } from "zod";
 
@@ -91,6 +97,26 @@ export async function createCard(body: CreateCardBody) {
 
 export async function updateCard(id: string, body: UpdateCardBody) {
   await sendJson("PATCH", `/api/cards/${id}`, body);
+}
+
+export async function getStudyQueue(body: StudyQueueBody) {
+  const res = await sendJson("POST", "/api/cards/study-queue", body);
+  return studyQueueResponseSchema.parse(await res.json());
+}
+
+export async function rateCard(id: string, body: RatingBody) {
+  const res = await sendJson("POST", `/api/cards/${id}/ratings`, body);
+  return ratingResponseSchema.parse(await res.json());
+}
+
+export async function resetSchedule(id: string) {
+  const res = await send(`/api/cards/${id}/schedule-reset`, { method: "POST" });
+  return resetResponseSchema.parse(await res.json());
+}
+
+export async function undoReview(id: string) {
+  const res = await send(`/api/reviews/${id}/undo`, { method: "POST" });
+  return undoResponseSchema.parse(await res.json());
 }
 
 export const deleteCard = (id: string) =>

@@ -24,6 +24,12 @@ import { ConfirmDialog } from "~/components/confirm-dialog";
 import { Button } from "~/components/ui/button";
 import { createCard, updateCard } from "~/lib/api";
 import { refreshLibrary } from "~/lib/queries";
+import {
+  clearStudy,
+  markStudySaved,
+  setStudyBatch,
+  studyHref,
+} from "~/lib/study-storage";
 import { BatchStrip } from "./batch-strip";
 import { EditorAction } from "./editor-action";
 import { EditorHeader } from "./editor-header";
@@ -86,11 +92,17 @@ function initialDeck(mode: EditorMode) {
 const initialLabels = (mode: EditorMode): CardLabel[] =>
   mode.kind === "edit" ? mode.card.labels : [];
 
-// Until the Study Session exists, "Estudar agora" ends on the Deck.
-const notifyStudySoon = () =>
-  toast("A Study Session ainda não está disponível.");
+const editHref = (cardId: string, returnToStudy: boolean) =>
+  returnToStudy ? studyHref() : `/decks/cards/${cardId}`;
 
-export function CardEditor({ mode }: { mode: EditorMode }) {
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: The editor coordinates batch saving, Study Session return, and unsaved draft confirmation.
+export function CardEditor({
+  mode,
+  returnToStudy = false,
+}: {
+  mode: EditorMode;
+  returnToStudy?: boolean;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const editing = mode.kind === "edit" ? mode.card : null;
@@ -121,6 +133,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
   // Read right after a save, before a re-render, so they live in refs.
   const deck = useRef(initialDeck(mode));
   const savedCount = useRef(0);
+  const batchIds = useRef<string[]>([]);
   const baseline = useRef("");
   const deckInput = useRef<HTMLInputElement>(null);
 
@@ -239,10 +252,8 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
         await updateCard(editing.id, toBody(draft));
         await refreshLibrary(queryClient);
         baseline.current = JSON.stringify(draft);
-        await navigate({
-          params: { cardId: editing.id },
-          to: "/decks/cards/$cardId",
-        });
+        markStudySaved(returnToStudy);
+        await navigate({ href: editHref(editing.id, returnToStudy) });
         toast.success("Card salvo.");
         return true;
       }
@@ -265,6 +276,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
         );
         deck.current ??= { id: card.deckId, name: deckName.trim() };
         savedCount.current += 1;
+        batchIds.current.push(card.id);
         setBatch((cards) => [...cards, { ...draft, id: card.id }]);
         flash(card.id);
         // The Labels carry over to the next Card.
@@ -290,6 +302,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
     queryClient,
     question,
     readDraft,
+    returnToStudy,
     validate,
   ]);
 
@@ -297,10 +310,13 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
     async (to: Leave) => {
       setLeaving(null);
       if (editing) {
-        await navigate({
-          params: { cardId: editing.id },
-          to: "/decks/cards/$cardId",
-        });
+        await navigate({ href: editHref(editing.id, returnToStudy) });
+        return;
+      }
+      if (to === "study") {
+        setStudyBatch(batchIds.current);
+        clearStudy();
+        await navigate({ search: { origem: "batch" }, to: "/estudar" });
         return;
       }
       if (deck.current) {
@@ -311,11 +327,8 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
       } else {
         await navigate({ to: "/decks" });
       }
-      if (to === "study") {
-        notifyStudySoon();
-      }
     },
-    [editing, navigate]
+    [editing, navigate, returnToStudy]
   );
 
   const close = useCallback(() => {
@@ -453,6 +466,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
   return (
     <div className="min-h-dvh">
       <EditorHeader
+        closeLabel={returnToStudy ? "Voltar à Study Session" : undefined}
         deckName={deck.current?.name}
         mode={mode.kind}
         onClose={close}

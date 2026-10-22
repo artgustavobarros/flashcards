@@ -9,11 +9,13 @@ export function EditorHeader({
   mode,
   onClose,
   right,
+  closeLabel = "Fechar o editor",
 }: {
   deckName?: string;
   mode: EditorMode["kind"];
   onClose: () => void;
   right: ReactNode;
+  closeLabel?: string;
 }) {
   let title = "Adicionar Cards";
   let subtitle = deckName ? `em ${deckName}` : "";
@@ -28,7 +30,7 @@ export function EditorHeader({
     <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-2 md:h-16 md:px-4">
         <Button
-          aria-label="Fechar o editor"
+          aria-label={closeLabel}
           onClick={onClose}
           size="icon"
           variant="ghost"

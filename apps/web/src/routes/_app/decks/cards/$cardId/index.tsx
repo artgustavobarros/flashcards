@@ -16,6 +16,7 @@ import {
   FolderInput,
   Pencil,
   Plus,
+  RotateCcw,
   Tag,
   Trash2,
 } from "lucide-react";
@@ -40,7 +41,9 @@ import {
   deleteCard,
   isMissing,
   labelCards,
+  resetSchedule,
   restoreCard,
+  undoReview,
   updateCard,
 } from "~/lib/api";
 import { cardOrigin } from "~/lib/card-origin";
@@ -136,6 +139,27 @@ function Page() {
     },
   });
 
+  const reset = useMutation({
+    mutationFn: () => resetSchedule(card.id),
+    onError: () => toast.error("Não foi possível reiniciar o agendamento."),
+    onSuccess: async ({ reviewId }) => {
+      await refreshLibrary(queryClient);
+      toast.success("Agendamento reiniciado.", {
+        action: {
+          label: "Desfazer",
+          onClick: async () => {
+            try {
+              await undoReview(reviewId);
+              await refreshLibrary(queryClient);
+            } catch {
+              toast.error("Não foi possível desfazer o reinício.");
+            }
+          },
+        },
+      });
+    },
+  });
+
   // Applied on each tap; the page refreshes when the dialog closes.
   const toggleLabel = useCallback(
     async (label: { id: string }, add: boolean) => {
@@ -157,6 +181,8 @@ function Page() {
   const openMove = useCallback(() => setDialog("move"), []);
   const openLabels = useCallback(() => setDialog("labels"), []);
   const openDelete = useCallback(() => setDialog("delete"), []);
+  const { mutate: resetCard } = reset;
+  const onReset = useCallback(() => resetCard(), [resetCard]);
   // Dialogs only ever ask to close; they are opened from the menu.
   const closeDialog = useCallback(() => setDialog(null), []);
   const { mutate: moveTo } = move;
@@ -202,6 +228,12 @@ function Page() {
                 <Tag />
                 Labels
               </DropdownMenuItem>
+              {card.state === "new" ? null : (
+                <DropdownMenuItem disabled={reset.isPending} onSelect={onReset}>
+                  <RotateCcw />
+                  Reiniciar agendamento
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onSelect={openDelete} variant="destructive">
                 <Trash2 />
                 Apagar Card
@@ -250,13 +282,25 @@ function Page() {
           <dd>{STATE_LABEL[card.state]}</dd>
           <dt className="pt-0.5 text-muted-foreground">Próxima revisão</dt>
           <dd className="flex flex-wrap items-center gap-2">
-            {card.state === "new" ? null : (
+            {card.state === "new" && !card.resetAt ? null : (
               <DueBadge card={card} today={today} />
             )}
             <span className={late ? "text-destructive" : undefined}>
               {nextReviewText(card, today)}
             </span>
           </dd>
+          {card.state === "new" && card.resetAt ? (
+            <>
+              <dt />
+              <dd className="text-muted-foreground text-xs">
+                Agendamento reiniciado em{" "}
+                {new Intl.DateTimeFormat("pt-BR", {
+                  day: "numeric",
+                  month: "short",
+                }).format(new Date(card.resetAt))}
+              </dd>
+            </>
+          ) : null}
         </dl>
         <CardComments cardId={card.id} />
       </div>

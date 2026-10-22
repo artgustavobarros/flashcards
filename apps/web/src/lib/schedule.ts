@@ -1,4 +1,4 @@
-import type { CardListItem, CardState } from "@daruma/shared";
+import type { Card, CardListItem, CardState } from "@daruma/shared";
 
 const MS_PER_DAY = 86_400_000;
 const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -31,7 +31,8 @@ const dayDate = (day: string) => new Date(`${day}T00:00:00Z`);
 const daysBetween = (from: string, to: string) =>
   Math.round((dayDate(to).getTime() - dayDate(from).getTime()) / MS_PER_DAY);
 
-type Schedule = Pick<CardListItem, "due" | "state">;
+type Schedule = Pick<CardListItem, "due" | "state"> &
+  Partial<Pick<Card, "resetAt">>;
 
 export type DueTone = "new" | "today" | "late";
 
@@ -50,6 +51,9 @@ export function dueBadge(card: Schedule, today: string) {
 // "Próxima revisão" on the Card page.
 export function nextReviewText(card: Schedule, today: string) {
   if (card.state === "new" || !card.due) {
+    if (card.resetAt) {
+      return "Entra como novo numa próxima Daily Review";
+    }
     return "Ainda não estudado. Entra numa Daily Review dentro do limite de novos por dia.";
   }
   const days = daysBetween(today, card.due);
