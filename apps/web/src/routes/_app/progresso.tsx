@@ -16,7 +16,7 @@ function Page() {
       </h2>
       <EmptyState
         icon={ChartColumn}
-        title="Sua evolução aparece aqui depois das primeiras revisões."
+        title="Sua evolução aparece aqui depois que você estudar os primeiros Cards."
       />
     </div>
   );

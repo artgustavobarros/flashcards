@@ -7,6 +7,7 @@ import { getHealth } from "~/lib/api";
 
 export const Route = createFileRoute("/_app/")({
   component: Home,
+  head: () => ({ meta: [{ title: "Início · Daruma" }] }),
   staticData: { title: "Início" },
 });
 

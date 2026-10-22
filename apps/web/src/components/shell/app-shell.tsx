@@ -15,21 +15,15 @@ function usePageTitle() {
   );
 }
 
-export function AppShell({
-  children,
-  title,
-}: {
-  children: ReactNode;
-  title?: string;
-}) {
-  const routeTitle = usePageTitle();
+export function AppShell({ children }: { children: ReactNode }) {
+  const title = usePageTitle();
 
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:h-20 md:px-6">
           <h1 className="truncate font-heading font-semibold text-2xl md:hidden">
-            {title ?? routeTitle}
+            {title}
           </h1>
           <Link className="hidden md:inline-flex" to="/">
             <DarumaLogo />
@@ -40,7 +34,7 @@ export function AppShell({
           >
             {NAV.map((item) => (
               <Link
-                activeOptions={{ exact: item.to === "/" }}
+                activeOptions={{ exact: item.exact }}
                 className="rounded-full px-4 py-1.5 text-muted-foreground transition hover:text-foreground data-[status=active]:bg-card data-[status=active]:font-medium data-[status=active]:text-foreground data-[status=active]:shadow-card"
                 key={item.to}
                 to={item.to}
@@ -72,7 +66,7 @@ export function AppShell({
         <div className="grid grid-cols-4 pt-2 pb-1">
           {NAV.map((item) => (
             <Link
-              activeOptions={{ exact: item.to === "/" }}
+              activeOptions={{ exact: item.exact }}
               className="group flex flex-col items-center gap-1 font-medium text-[11px] text-muted-foreground data-[status=active]:text-foreground"
               key={item.to}
               to={item.to}

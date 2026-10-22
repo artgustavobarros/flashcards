@@ -7,9 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
+import { AppToaster } from "~/components/app-toaster";
 import { ErrorPage } from "~/components/error-page";
 import { NotFound } from "~/components/not-found";
-import { Toaster } from "~/components/ui/sonner";
 import styles from "~/styles.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
@@ -40,20 +40,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        disableTransitionOnChange
-        enableSystem
-      >
-        <Outlet />
-        {/* Mobile: above the tab bar and the "+ Novo" pill. */}
-        <Toaster
-          duration={5000}
-          mobileOffset={{ bottom: 152 }}
-          position="bottom-right"
-        />
-      </ThemeProvider>
+      <Outlet />
     </QueryClientProvider>
   );
 }
@@ -65,7 +52,17 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        {/* In the shell, not RootComponent: the root errorComponent replaces RootComponent,
+            and the error page still needs the theme and toasts. */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          disableTransitionOnChange
+          enableSystem
+        >
+          {children}
+          <AppToaster />
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>

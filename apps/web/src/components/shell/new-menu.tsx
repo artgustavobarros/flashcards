@@ -22,21 +22,30 @@ const OPTIONS = [
     icon: Layers,
     title: "Novo Deck",
     hint: "Comece uma coleção nova",
+    unavailable: "Criar Decks ainda não está disponível.",
   },
   {
     id: "cards",
     icon: Plus,
     title: "Adicionar Cards a…",
     hint: "Escolha um Deck existente",
+    unavailable: "O editor de Cards ainda não existe.",
   },
 ] as const;
 
-// The editor does not exist yet; both options land there once Decks and Cards are built.
-function soon() {
-  toast("O editor de Cards ainda não existe.");
+type Option = (typeof OPTIONS)[number];
+
+// Neither screen exists yet; both options get real destinations with Decks and Cards.
+// Each item carries data-option so one handler serves the whole list.
+function notifyUnavailable(event: { currentTarget: EventTarget | null }) {
+  const id = (event.currentTarget as HTMLElement | null)?.dataset.option;
+  const option = OPTIONS.find((o) => o.id === id);
+  if (option) {
+    toast(option.unavailable);
+  }
 }
 
-function OptionBody({ option }: { option: (typeof OPTIONS)[number] }) {
+function OptionBody({ option }: { option: Option }) {
   return (
     <>
       <option.icon className="mt-0.5 text-muted-foreground" />
@@ -64,8 +73,9 @@ export function NewMenu() {
         {OPTIONS.map((option) => (
           <DropdownMenuItem
             className="items-start gap-3 px-3 py-2.5"
+            data-option={option.id}
             key={option.id}
-            onSelect={soon}
+            onSelect={notifyUnavailable}
           >
             <OptionBody option={option} />
           </DropdownMenuItem>
@@ -79,10 +89,13 @@ export function NewMenu() {
 export function NewSheet() {
   const [open, setOpen] = useState(false);
   const openSheet = useCallback(() => setOpen(true), []);
-  const pick = useCallback(() => {
-    setOpen(false);
-    soon();
-  }, []);
+  const closeAndNotify = useCallback(
+    (event: { currentTarget: EventTarget | null }) => {
+      setOpen(false);
+      notifyUnavailable(event);
+    },
+    []
+  );
 
   return (
     <>
@@ -111,8 +124,9 @@ export function NewSheet() {
             {OPTIONS.map((option) => (
               <button
                 className="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left hover:bg-accent [&_svg]:size-4"
+                data-option={option.id}
                 key={option.id}
-                onClick={pick}
+                onClick={closeAndNotify}
                 type="button"
               >
                 <OptionBody option={option} />
