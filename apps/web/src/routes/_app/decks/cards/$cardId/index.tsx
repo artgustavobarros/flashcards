@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { deleteCard, isMissing, restoreCard, updateCard } from "~/lib/api";
+import { cardOrigin } from "~/lib/card-origin";
 import { cardQuery, refreshLibrary } from "~/lib/queries";
 import { dueBadge, nextReviewText, STATE_LABEL } from "~/lib/schedule";
 
@@ -70,7 +71,9 @@ function Page() {
   const [dialog, setDialog] = useState<"move" | "delete" | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  usePageHeader("Card", `/decks/${card.deckId}`);
+  // Back to the list the Card was opened from, or its Deck.
+  const origin = cardOrigin(card);
+  usePageHeader("Card", origin.href);
 
   const move = useMutation({
     mutationFn: (deck: { id: string; name: string }) =>
@@ -124,11 +127,10 @@ function Page() {
     <div>
       <Link
         className="mb-4 hidden items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground md:inline-flex"
-        params={{ deckId: card.deckId }}
-        to="/decks/$deckId"
+        to={origin.href}
       >
         <ArrowLeft className="size-4" />
-        {card.deckName}
+        {origin.label}
       </Link>
       <div className="mx-auto max-w-2xl">
         <div className="mb-3 flex items-center gap-2">

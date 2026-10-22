@@ -1,4 +1,6 @@
 import {
+  type CardsLabelBody,
+  type CardsQuery,
   type CreateCardBody,
   cardResponseSchema,
   cardsResponseSchema,
@@ -7,6 +9,8 @@ import {
   decksResponseSchema,
   healthSchema,
   imageResponseSchema,
+  labelResponseSchema,
+  labelsResponseSchema,
   type UpdateCardBody,
 } from "@daruma/shared";
 import type { z } from "zod";
@@ -65,8 +69,15 @@ export const deleteDeck = (id: string) =>
 export const restoreDeck = (id: string) =>
   send(`/api/decks/${id}/restore`, { method: "POST" });
 
-export const getCards = (filter: { deckId?: string }) =>
-  getJson(`/api/cards?${new URLSearchParams(filter)}`, cardsResponseSchema);
+export function getCards(query: CardsQuery) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+  return getJson(`/api/cards?${params}`, cardsResponseSchema);
+}
 
 export const getCard = (id: string) =>
   getJson(`/api/cards/${id}`, cardResponseSchema);
@@ -85,6 +96,44 @@ export const deleteCard = (id: string) =>
 
 export const restoreCard = (id: string) =>
   send(`/api/cards/${id}/restore`, { method: "POST" });
+
+// Selection actions: all or nothing.
+export async function moveCards(cardIds: string[], deckId: string) {
+  await sendJson("POST", "/api/cards/move", { cardIds, deckId });
+}
+
+export async function labelCards(body: CardsLabelBody) {
+  await sendJson("POST", "/api/cards/label", body);
+}
+
+export async function deleteCards(cardIds: string[]) {
+  await sendJson("POST", "/api/cards/delete", { cardIds });
+}
+
+export async function restoreCards(cardIds: string[]) {
+  await sendJson("POST", "/api/cards/restore", { cardIds });
+}
+
+export const getLabels = () => getJson("/api/labels", labelsResponseSchema);
+
+// 409 when the name is taken (isTaken).
+export async function createLabel(name: string) {
+  const res = await sendJson("POST", "/api/labels", { name });
+  return labelResponseSchema.parse(await res.json()).label;
+}
+
+export async function renameLabel(id: string, name: string) {
+  await sendJson("PATCH", `/api/labels/${id}`, { name });
+}
+
+export const deleteLabel = (id: string) =>
+  send(`/api/labels/${id}`, { method: "DELETE" });
+
+export const restoreLabel = (id: string) =>
+  send(`/api/labels/${id}/restore`, { method: "POST" });
+
+export const isTaken = (error: unknown) =>
+  error instanceof ApiError && error.status === 409;
 
 // Returns the src to put in the editor: /api/images/<uuid>.<ext>.
 export async function uploadImage(file: File) {
