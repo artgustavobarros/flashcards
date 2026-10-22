@@ -83,7 +83,7 @@ describe("delete and restore", () => {
     await service.create(userId, "Ossos");
 
     await expect(service.restore(userId, old.id)).rejects.toThrow(
-      new ConflictException("Já existe uma Label com esse nome.")
+      "Já existe uma Label com esse nome."
     );
   });
 
