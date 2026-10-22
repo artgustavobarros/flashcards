@@ -7,9 +7,9 @@
     "check": "ultracite check",
     "db:down": "docker compose down",
     "db:up": "docker compose up -d --wait",
+    "predev": "pnpm --filter @daruma/shared build",
     "dev": "pnpm --parallel --filter @daruma/shared --filter @daruma/api --filter @daruma/web dev",
     "fix": "ultracite fix",
-    "predev": "pnpm --filter @daruma/shared build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
   },
