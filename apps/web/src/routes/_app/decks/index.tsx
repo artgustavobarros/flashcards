@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, Layers, Plus } from "lucide-react";
 import { deckCountsLine, TodayBadge } from "~/components/decks/deck-counts";
+import { DeckTabs } from "~/components/decks/deck-tabs";
 import { EmptyState } from "~/components/empty-state";
 import { Button } from "~/components/ui/button";
 import { decksQuery } from "~/lib/queries";
@@ -22,6 +23,7 @@ function Page() {
         <h2 className="hidden font-heading font-semibold text-3xl tracking-tight md:block">
           Decks
         </h2>
+        <DeckTabs className="md:ml-6" />
         {decks.length ? (
           <Button
             asChild

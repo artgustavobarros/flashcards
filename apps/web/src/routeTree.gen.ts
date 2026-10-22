@@ -16,9 +16,11 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app/configuracoes'
 import { Route as AppProgressoRouteImport } from './routes/_app/progresso'
 import { Route as AppDecksIndexRouteImport } from './routes/_app/decks/index'
+import { Route as AppDecksLabelsRouteImport } from './routes/_app/decks/labels'
 import { Route as AppDecksNovoRouteImport } from './routes/_app/decks/novo'
 import { Route as AppDecksDeckIdIndexRouteImport } from './routes/_app/decks/$deckId/index'
 import { Route as AppDecksDeckIdAdicionarRouteImport } from './routes/_app/decks/$deckId/adicionar'
+import { Route as AppDecksCardsIndexRouteImport } from './routes/_app/decks/cards/index'
 import { Route as AppDecksCardsCardIdIndexRouteImport } from './routes/_app/decks/cards/$cardId/index'
 import { Route as AppDecksCardsCardIdEditarRouteImport } from './routes/_app/decks/cards/$cardId/editar'
 
@@ -56,6 +58,11 @@ const AppDecksIndexRoute = AppDecksIndexRouteImport.update({
   path: '/decks/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDecksLabelsRoute = AppDecksLabelsRouteImport.update({
+  id: '/decks/labels',
+  path: '/decks/labels',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDecksNovoRoute = AppDecksNovoRouteImport.update({
   id: '/decks/novo',
   path: '/decks/novo',
@@ -69,6 +76,11 @@ const AppDecksDeckIdIndexRoute = AppDecksDeckIdIndexRouteImport.update({
 const AppDecksDeckIdAdicionarRoute = AppDecksDeckIdAdicionarRouteImport.update({
   id: '/decks/$deckId/adicionar',
   path: '/decks/$deckId/adicionar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDecksCardsIndexRoute = AppDecksCardsIndexRouteImport.update({
+  id: '/decks/cards/',
+  path: '/decks/cards/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDecksCardsCardIdIndexRoute =
@@ -90,10 +102,12 @@ export interface FileRoutesByFullPath {
   '/privacidade': typeof PrivacidadeRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/progresso': typeof AppProgressoRoute
+  '/decks/labels': typeof AppDecksLabelsRoute
   '/decks/novo': typeof AppDecksNovoRoute
   '/decks/': typeof AppDecksIndexRoute
   '/decks/$deckId/adicionar': typeof AppDecksDeckIdAdicionarRoute
   '/decks/$deckId/': typeof AppDecksDeckIdIndexRoute
+  '/decks/cards/': typeof AppDecksCardsIndexRoute
   '/decks/cards/$cardId/editar': typeof AppDecksCardsCardIdEditarRoute
   '/decks/cards/$cardId/': typeof AppDecksCardsCardIdIndexRoute
 }
@@ -103,10 +117,12 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AppConfiguracoesRoute
   '/progresso': typeof AppProgressoRoute
   '/': typeof AppIndexRoute
+  '/decks/labels': typeof AppDecksLabelsRoute
   '/decks/novo': typeof AppDecksNovoRoute
   '/decks': typeof AppDecksIndexRoute
   '/decks/$deckId/adicionar': typeof AppDecksDeckIdAdicionarRoute
   '/decks/$deckId': typeof AppDecksDeckIdIndexRoute
+  '/decks/cards': typeof AppDecksCardsIndexRoute
   '/decks/cards/$cardId/editar': typeof AppDecksCardsCardIdEditarRoute
   '/decks/cards/$cardId': typeof AppDecksCardsCardIdIndexRoute
 }
@@ -118,10 +134,12 @@ export interface FileRoutesById {
   '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/progresso': typeof AppProgressoRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/decks/labels': typeof AppDecksLabelsRoute
   '/_app/decks/novo': typeof AppDecksNovoRoute
   '/_app/decks/': typeof AppDecksIndexRoute
   '/_app/decks/$deckId/adicionar': typeof AppDecksDeckIdAdicionarRoute
   '/_app/decks/$deckId/': typeof AppDecksDeckIdIndexRoute
+  '/_app/decks/cards/': typeof AppDecksCardsIndexRoute
   '/_app/decks/cards/$cardId/editar': typeof AppDecksCardsCardIdEditarRoute
   '/_app/decks/cards/$cardId/': typeof AppDecksCardsCardIdIndexRoute
 }
@@ -133,10 +151,12 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/configuracoes'
     | '/progresso'
+    | '/decks/labels'
     | '/decks/novo'
     | '/decks/'
     | '/decks/$deckId/adicionar'
     | '/decks/$deckId/'
+    | '/decks/cards/'
     | '/decks/cards/$cardId/editar'
     | '/decks/cards/$cardId/'
   fileRoutesByTo: FileRoutesByTo
@@ -146,10 +166,12 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/progresso'
     | '/'
+    | '/decks/labels'
     | '/decks/novo'
     | '/decks'
     | '/decks/$deckId/adicionar'
     | '/decks/$deckId'
+    | '/decks/cards'
     | '/decks/cards/$cardId/editar'
     | '/decks/cards/$cardId'
   id:
@@ -160,10 +182,12 @@ export interface FileRouteTypes {
     | '/_app/configuracoes'
     | '/_app/progresso'
     | '/_app/'
+    | '/_app/decks/labels'
     | '/_app/decks/novo'
     | '/_app/decks/'
     | '/_app/decks/$deckId/adicionar'
     | '/_app/decks/$deckId/'
+    | '/_app/decks/cards/'
     | '/_app/decks/cards/$cardId/editar'
     | '/_app/decks/cards/$cardId/'
   fileRoutesById: FileRoutesById
@@ -225,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDecksIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/decks/labels': {
+      id: '/_app/decks/labels'
+      path: '/decks/labels'
+      fullPath: '/decks/labels'
+      preLoaderRoute: typeof AppDecksLabelsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/decks/novo': {
       id: '/_app/decks/novo'
       path: '/decks/novo'
@@ -244,6 +275,13 @@ declare module '@tanstack/react-router' {
       path: '/decks/$deckId/adicionar'
       fullPath: '/decks/$deckId/adicionar'
       preLoaderRoute: typeof AppDecksDeckIdAdicionarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/decks/cards/': {
+      id: '/_app/decks/cards/'
+      path: '/decks/cards'
+      fullPath: '/decks/cards/'
+      preLoaderRoute: typeof AppDecksCardsIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/decks/cards/$cardId/': {
@@ -267,10 +305,12 @@ interface AppRouteChildren {
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppProgressoRoute: typeof AppProgressoRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppDecksLabelsRoute: typeof AppDecksLabelsRoute
   AppDecksNovoRoute: typeof AppDecksNovoRoute
   AppDecksIndexRoute: typeof AppDecksIndexRoute
   AppDecksDeckIdAdicionarRoute: typeof AppDecksDeckIdAdicionarRoute
   AppDecksDeckIdIndexRoute: typeof AppDecksDeckIdIndexRoute
+  AppDecksCardsIndexRoute: typeof AppDecksCardsIndexRoute
   AppDecksCardsCardIdEditarRoute: typeof AppDecksCardsCardIdEditarRoute
   AppDecksCardsCardIdIndexRoute: typeof AppDecksCardsCardIdIndexRoute
 }
@@ -279,10 +319,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppProgressoRoute: AppProgressoRoute,
   AppIndexRoute: AppIndexRoute,
+  AppDecksLabelsRoute: AppDecksLabelsRoute,
   AppDecksNovoRoute: AppDecksNovoRoute,
   AppDecksIndexRoute: AppDecksIndexRoute,
   AppDecksDeckIdAdicionarRoute: AppDecksDeckIdAdicionarRoute,
   AppDecksDeckIdIndexRoute: AppDecksDeckIdIndexRoute,
+  AppDecksCardsIndexRoute: AppDecksCardsIndexRoute,
   AppDecksCardsCardIdEditarRoute: AppDecksCardsCardIdEditarRoute,
   AppDecksCardsCardIdIndexRoute: AppDecksCardsCardIdIndexRoute,
 }

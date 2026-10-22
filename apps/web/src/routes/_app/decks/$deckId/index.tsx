@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { CardList } from "~/components/cards/card-list";
+import { CardBrowser } from "~/components/cards/card-browser";
 import { ConfirmDialog } from "~/components/confirm-dialog";
 import { RenameDeckDialog } from "~/components/decks/rename-deck-dialog";
 import { EmptyState } from "~/components/empty-state";
@@ -34,7 +34,8 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { deleteDeck, isMissing, restoreDeck } from "~/lib/api";
-import { deckCardsQuery, deckQuery, refreshLibrary } from "~/lib/queries";
+import { type CardFilters, cardFiltersSchema } from "~/lib/card-filters";
+import { deckQuery, labelsQuery, refreshLibrary } from "~/lib/queries";
 import { plural } from "~/lib/schedule";
 
 export const Route = createFileRoute("/_app/decks/$deckId/")({
@@ -46,7 +47,7 @@ export const Route = createFileRoute("/_app/decks/$deckId/")({
     try {
       const [deck] = await Promise.all([
         queryClient.ensureQueryData(deckQuery(deckId)),
-        queryClient.ensureQueryData(deckCardsQuery(deckId)),
+        queryClient.ensureQueryData(labelsQuery),
       ]);
       return { name: deck.deck.name };
     } catch (error) {
@@ -61,6 +62,7 @@ export const Route = createFileRoute("/_app/decks/$deckId/")({
     meta: [{ title: `${loaderData?.name ?? "Deck"} · Daruma` }],
   }),
   staticData: { title: "Deck" },
+  validateSearch: cardFiltersSchema,
 });
 
 // Until the Study Session exists.
@@ -92,13 +94,21 @@ function Stat({
 function Page() {
   const { deckId } = Route.useParams();
   const { deck } = useSuspenseQuery(deckQuery(deckId)).data;
-  const {
-    data: { cards, today },
-  } = useSuspenseQuery(deckCardsQuery(deckId));
+  const filters = Route.useSearch();
   const [dialog, setDialog] = useState<"rename" | "delete" | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   usePageHeader(deck.name, "/decks");
+  const setFilters = useCallback(
+    (search: CardFilters) =>
+      navigate({
+        params: { deckId },
+        replace: true,
+        search,
+        to: "/decks/$deckId",
+      }),
+    [deckId, navigate]
+  );
 
   const remove = useMutation({
     mutationFn: () => deleteDeck(deck.id),
@@ -196,8 +206,13 @@ function Page() {
           </Button>
         </div>
       </div>
-      {cards.length ? (
-        <CardList cards={cards} today={today} />
+      {deck.cardCount ? (
+        <CardBrowser
+          backLabel={deck.name}
+          deckId={deck.id}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
       ) : (
         <EmptyState
           description="Escreva os primeiros Cards. Ao terminar, “Estudar agora” abre uma sessão só com eles."
