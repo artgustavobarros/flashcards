@@ -6,8 +6,8 @@ export function getRouter() {
   const queryClient = new QueryClient();
 
   return createRouter({
-    routeTree,
     context: { queryClient },
+    routeTree,
     scrollRestoration: true,
   });
 }
@@ -15,5 +15,9 @@ export function getRouter() {
 declare module "@tanstack/react-router" {
   interface Register {
     router: ReturnType<typeof getRouter>;
+  }
+  interface StaticDataRouteOption {
+    // Shown as the big header title on mobile.
+    title?: string;
   }
 }

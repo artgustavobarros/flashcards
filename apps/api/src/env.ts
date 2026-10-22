@@ -1,15 +1,22 @@
+import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 // apps/api/.env is optional: in production the variables come from the container.
 try {
   process.loadEnvFile();
-} catch {}
+} catch {
+  // No .env file: rely on the process environment.
+}
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().int().positive().default(3001),
-  DATABASE_URL: z.url(),
+export const env = createEnv({
+  emptyStringAsUndefined: true,
+  runtimeEnv: process.env,
+  server: {
+    DATABASE_URL: z.url(),
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+    PORT: z.coerce.number().int().positive().default(3001),
+  },
 });
-
-export const env = envSchema.parse(process.env);
 export type Env = typeof env;

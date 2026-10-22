@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "ultracite/biome/core",
+    "../../biome.jsonc",
+    "ultracite/biome/nestjs"
+  ],
+  "root": false,
+  "javascript": {
+    // Nest injects through parameter decorators: constructor(@Inject(DB) db).
+    "parser": { "unsafeParameterDecoratorsEnabled": true }
+  },
+  "linter": {
+    "rules": {
+      // Constructors that only declare injected parameter properties have empty bodies.
+      "suspicious": { "noEmptyBlockStatements": "off" }
+    }
+  }
+}
