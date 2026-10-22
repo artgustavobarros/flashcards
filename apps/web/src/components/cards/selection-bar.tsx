@@ -1,4 +1,4 @@
-import type { CardListItem } from "@daruma/shared";
+import type { CardLabel, CardListItem } from "@daruma/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FolderInput, Tag, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -94,8 +94,8 @@ export function SelectionBar({
   // The list refreshes only when the dialog closes: with a Label filter on, taking the Label
   // off would drop the Cards from the list, and the selection with them, mid-dialog.
   const toggleLabel = useCallback(
-    async (labelId: string, add: boolean) => {
-      await labelCards({ add, cardIds: ids, labelId });
+    async (label: CardLabel, add: boolean) => {
+      await labelCards({ add, cardIds: ids, labelId: label.id });
       await queryClient.invalidateQueries({ queryKey: ["labels"] });
     },
     [ids, queryClient]

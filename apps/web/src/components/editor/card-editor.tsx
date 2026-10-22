@@ -1,5 +1,6 @@
 import {
   type Card,
+  type CardLabel,
   deckNameSchema,
   EMPTY_RICH_TEXT,
   type RichText,
@@ -11,6 +12,7 @@ import { cn } from "cn";
 import { Play } from "lucide-react";
 import {
   type ChangeEvent,
+  type RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -25,6 +27,7 @@ import { refreshLibrary } from "~/lib/queries";
 import { BatchStrip } from "./batch-strip";
 import { EditorAction } from "./editor-action";
 import { EditorHeader } from "./editor-header";
+import { EditorLabels } from "./editor-labels";
 import { EditorToolbar } from "./editor-toolbar";
 import { FieldError } from "./field-error";
 import { FormulaDialog, type FormulaTarget } from "./formula-dialog";
@@ -42,8 +45,21 @@ export type Side = "question" | "answer";
 
 interface Draft {
   answer: RichText;
+  labels: CardLabel[];
   question: RichText;
 }
+
+const EMPTY_DRAFT: Draft = {
+  answer: EMPTY_RICH_TEXT,
+  labels: [],
+  question: EMPTY_RICH_TEXT,
+};
+
+// What the API takes: the Labels as ids.
+const toBody = ({ labels, ...draft }: Draft) => ({
+  ...draft,
+  labelIds: labels.map((label) => label.id),
+});
 
 export interface SavedCard extends Draft {
   id: string;
@@ -67,6 +83,9 @@ function initialDeck(mode: EditorMode) {
   return null;
 }
 
+const initialLabels = (mode: EditorMode): CardLabel[] =>
+  mode.kind === "edit" ? mode.card.labels : [];
+
 // Until the Study Session exists, "Estudar agora" ends on the Deck.
 const notifyStudySoon = () =>
   toast("A Study Session ainda não está disponível.");
@@ -89,6 +108,15 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
     (FormulaTarget & { side: Side }) | null
   >(null);
   const [leaving, setLeaving] = useState<Leave | null>(null);
+  const [labelsOpen, setLabelsOpen] = useState(false);
+  // The Labels of the Card in the editor. Also in a ref, so readDraft stays stable and the
+  // "unsaved" baseline isn't reset when they change.
+  const [labels, setLabelsState] = useState(() => initialLabels(mode));
+  const labelsRef = useRef(labels);
+  const setLabels = useCallback((next: CardLabel[]) => {
+    labelsRef.current = next;
+    setLabelsState(next);
+  }, []);
   const [saving, setSaving] = useState(false);
   // Read right after a save, before a re-render, so they live in refs.
   const deck = useRef(initialDeck(mode));
@@ -119,6 +147,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
   const readDraft = useCallback(
     (): Draft => ({
       answer: answer.getJSON() as RichText,
+      labels: labelsRef.current,
       question: question.getJSON() as RichText,
     }),
     [answer, question]
@@ -138,10 +167,11 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
     (draft: Draft) => {
       question.commands.setContent(draft.question);
       answer.commands.setContent(draft.answer);
+      setLabels(draft.labels);
       baseline.current = JSON.stringify(readDraft());
       refreshRef.current();
     },
-    [answer, question, readDraft]
+    [answer, question, readDraft, setLabels]
   );
 
   // What counts as "unsaved": a saved Card that differs from how it was loaded, or a new Card
@@ -206,7 +236,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
     setSaving(true);
     try {
       if (editing) {
-        await updateCard(editing.id, draft);
+        await updateCard(editing.id, toBody(draft));
         await refreshLibrary(queryClient);
         baseline.current = JSON.stringify(draft);
         await navigate({
@@ -217,7 +247,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
         return true;
       }
       if (batchEditId) {
-        await updateCard(batchEditId, draft);
+        await updateCard(batchEditId, toBody(draft));
         setBatch((cards) =>
           cards.map((card) =>
             card.id === batchEditId ? { ...card, ...draft } : card
@@ -225,24 +255,20 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
         );
         flash(batchEditId);
         setBatchEditId(null);
-        loadDraft(
-          stash.current ?? {
-            answer: EMPTY_RICH_TEXT,
-            question: EMPTY_RICH_TEXT,
-          }
-        );
+        loadDraft(stash.current ?? EMPTY_DRAFT);
         stash.current = null;
       } else {
         const { card } = await createCard(
           deck.current
-            ? { ...draft, deckId: deck.current.id }
-            : { ...draft, deckName: deckNameSchema.parse(deckName) }
+            ? { ...toBody(draft), deckId: deck.current.id }
+            : { ...toBody(draft), deckName: deckNameSchema.parse(deckName) }
         );
         deck.current ??= { id: card.deckId, name: deckName.trim() };
         savedCount.current += 1;
         setBatch((cards) => [...cards, { ...draft, id: card.id }]);
         flash(card.id);
-        loadDraft({ answer: EMPTY_RICH_TEXT, question: EMPTY_RICH_TEXT });
+        // The Labels carry over to the next Card.
+        loadDraft({ ...EMPTY_DRAFT, labels: draft.labels });
       }
       setSide("question");
       question.commands.focus("end");
@@ -330,7 +356,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
 
   // Ctrl/Cmd + Enter does the main action, also inside the text (where Tiptap would add a
   // line break), so it is caught before the editor sees it.
-  const dialogOpen = formula !== null || leaving !== null;
+  const dialogOpen = formula !== null || leaving !== null || labelsOpen;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (
@@ -370,9 +396,7 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
   const backToNew = useCallback(() => {
     setBatchEditId(null);
     setErrors({});
-    loadDraft(
-      stash.current ?? { answer: EMPTY_RICH_TEXT, question: EMPTY_RICH_TEXT }
-    );
+    loadDraft(stash.current ?? EMPTY_DRAFT);
     stash.current = null;
     setSide("question");
   }, [loadDraft]);
@@ -459,23 +483,12 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
       />
       <main className="mx-auto max-w-2xl px-4 pt-4 pb-40 md:pt-8 md:pb-16">
         {mode.kind === "new-deck" && !deck.current ? (
-          <div className="mb-5 space-y-1">
-            <input
-              aria-invalid={!!errors.deck}
-              aria-label="Nome do Deck"
-              autoFocus
-              className={cn(
-                "w-full border-b bg-transparent pb-2 font-heading font-semibold text-2xl outline-none placeholder:text-muted-foreground/60 focus:border-primary",
-                errors.deck && "border-destructive"
-              )}
-              maxLength={80}
-              onChange={onDeckName}
-              placeholder="Nome do novo Deck"
-              ref={deckInput}
-              value={deckName}
-            />
-            <FieldError message={errors.deck} />
-          </div>
+          <DeckNameField
+            error={errors.deck}
+            inputRef={deckInput}
+            onChange={onDeckName}
+            value={deckName}
+          />
         ) : null}
         {editing ? null : (
           <BatchStrip
@@ -523,6 +536,13 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
           ) : null}
           <EditorToolbar editor={editor} onFormula={openFormula} />
         </div>
+        <EditorLabels
+          carryOver={!(editing || batchEditId)}
+          labels={labels}
+          onChange={setLabels}
+          onOpenChange={setLabelsOpen}
+          open={labelsOpen}
+        />
         {editing && editing.state !== "new" ? (
           <p className="mt-2 px-1 text-muted-foreground text-xs">
             O agendamento deste Card não muda.
@@ -550,6 +570,39 @@ export function CardEditor({ mode }: { mode: EditorMode }) {
         onCancel={closeLeaving}
         onConfirm={confirmLeaving}
       />
+    </div>
+  );
+}
+
+// "Novo Deck": the name, until the first Card creates the Deck.
+function DeckNameField({
+  error,
+  inputRef,
+  onChange,
+  value,
+}: {
+  error?: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  value: string;
+}) {
+  return (
+    <div className="mb-5 space-y-1">
+      <input
+        aria-invalid={!!error}
+        aria-label="Nome do Deck"
+        autoFocus
+        className={cn(
+          "w-full border-b bg-transparent pb-2 font-heading font-semibold text-2xl outline-none placeholder:text-muted-foreground/60 focus:border-primary",
+          error && "border-destructive"
+        )}
+        maxLength={80}
+        onChange={onChange}
+        placeholder="Nome do novo Deck"
+        ref={inputRef}
+        value={value}
+      />
+      <FieldError message={error} />
     </div>
   );
 }
