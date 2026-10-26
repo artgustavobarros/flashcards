@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "~/components/confirm-dialog";
 import { Button } from "~/components/ui/button";
 import { createCard, updateCard } from "~/lib/api";
-import { refreshLibrary } from "~/lib/queries";
+import { refreshCard, refreshLibrary } from "~/lib/queries";
 import {
   clearStudy,
   markStudySaved,
@@ -251,6 +251,7 @@ export function CardEditor({
       if (editing) {
         await updateCard(editing.id, toBody(draft));
         await refreshLibrary(queryClient);
+        await refreshCard(queryClient, editing.id);
         baseline.current = JSON.stringify(draft);
         markStudySaved(returnToStudy);
         await navigate({ href: editHref(editing.id, returnToStudy) });
