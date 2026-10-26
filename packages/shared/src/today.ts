@@ -60,9 +60,33 @@ export type Today = z.infer<typeof todaySchema>;
 
 export const todayResponseSchema = z.object({ today: todaySchema });
 
+const isTimeZone = (timezone: string) => {
+  try {
+    Intl.DateTimeFormat("en", { timeZone: timezone }).format(0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // Partial: each setting is saved on its own.
 export const settingsBodySchema = z
-  .object({ newCardsPaused: z.boolean() })
+  .object({
+    emailReminder: z.boolean(),
+    inAppReminder: z.boolean(),
+    newCardsPaused: z.boolean(),
+    newCardsPerDay: z.number().int().min(0).max(200).multipleOf(5),
+    reviewTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+    theme: z.enum(["light", "dark", "system"]),
+    timezone: z.string().refine(isTimeZone),
+    timezoneAuto: z.boolean(),
+  })
   .partial()
   .strict();
 export type SettingsBody = z.infer<typeof settingsBodySchema>;
+
+export const settingsSchema = settingsBodySchema.required();
+export type Settings = z.infer<typeof settingsSchema>;
+
+export const deleteAccountBodySchema = z.object({ email: z.email() }).strict();
+export type DeleteAccountBody = z.infer<typeof deleteAccountBodySchema>;
