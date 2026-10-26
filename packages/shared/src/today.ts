@@ -87,6 +87,7 @@ export type SettingsBody = z.infer<typeof settingsBodySchema>;
 
 export const settingsSchema = settingsBodySchema.required();
 export type Settings = z.infer<typeof settingsSchema>;
+export const settingsResponseSchema = z.object({ settings: settingsSchema });
 
 export const deleteAccountBodySchema = z.object({ email: z.email() }).strict();
 export type DeleteAccountBody = z.infer<typeof deleteAccountBodySchema>;
