@@ -3,7 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { State } from "ts-fsrs";
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import { connect, createCard, createUser } from "../../test/db.js";
-import { cards, reviews } from "../db/domain-schema.js";
+import { cards, reviews, userDays } from "../db/domain-schema.js";
 import { SchedulingService } from "./scheduling.service.js";
 
 const { db, pool } = connect();
@@ -109,6 +109,44 @@ describe("rate", () => {
     await expect(service.rate(userId, cardId, 3, 1000)).rejects.toThrow(
       NotFoundException
     );
+  });
+});
+
+describe("Daily Review completion", () => {
+  const completedAt = async () => {
+    const [day] = await db
+      .select({ completedAt: userDays.completedAt })
+      .from(userDays)
+      .where(eq(userDays.userId, userId));
+    return day?.completedAt ?? null;
+  };
+
+  test("the Rating that empties the Daily Review completes the Day", async () => {
+    const other = await createCard(db, userId);
+
+    await service.rate(userId, cardId, 3, 1000);
+    expect(await completedAt()).toBeNull();
+    await service.rate(userId, other, 3, 1000);
+    expect(await completedAt()).toEqual(now);
+  });
+
+  test("Undo of that Rating takes the completion back", async () => {
+    const { reviewId } = await service.rate(userId, cardId, 3, 1000);
+
+    await service.undo(userId, reviewId);
+
+    expect(await completedAt()).toBeNull();
+  });
+
+  test("a Day that reopens keeps its completion", async () => {
+    await service.rate(userId, cardId, 3, 1000);
+    const later = await createCard(db, userId);
+    now = new Date("2026-10-23T00:10:00Z");
+
+    const { reviewId } = await service.rate(userId, later, 3, 1000);
+    await service.undo(userId, reviewId);
+
+    expect(await completedAt()).toEqual(new Date("2026-10-23T00:00:00Z"));
   });
 });
 

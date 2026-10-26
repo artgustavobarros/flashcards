@@ -20,7 +20,6 @@ import {
 import {
   and,
   asc,
-  count,
   eq,
   exists,
   inArray,
@@ -43,13 +42,9 @@ import {
   decks,
   labels,
   reviews,
-  userSettings,
 } from "../db/domain-schema.js";
-import {
-  cardState,
-  MATURE_DAYS,
-  retrievability,
-} from "../scheduling/schedule.js";
+import { dailyReview } from "../scheduling/daily-review.js";
+import { cardState, MATURE_DAYS } from "../scheduling/schedule.js";
 import type { Day } from "../scheduling/today.js";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -260,76 +255,13 @@ export class CardsService {
         throw new NotFoundException("Deck not found.");
       }
     }
-    const due = await this.db
-      .select({
-        difficulty: cards.difficulty,
-        due: cards.due,
-        id: cards.id,
-        lapses: cards.lapses,
-        lastReviewedOn: cards.lastReviewedOn,
-        reps: cards.reps,
-        scheduledDays: cards.scheduledDays,
-        stability: cards.stability,
-        state: cards.state,
-      })
-      .from(cards)
-      .innerJoin(decks, eq(decks.id, cards.deckId))
-      .where(
-        and(
-          this.liveCards(userId),
-          isNull(decks.deletedAt),
-          body.origin === "deck" ? eq(cards.deckId, body.deckId) : undefined,
-          ne(cards.state, State.New),
-          lte(cards.due, today),
-          or(isNull(cards.lastReviewedOn), ne(cards.lastReviewedOn, today))
-        )
-      )
-      .orderBy(asc(cards.due), asc(cards.id));
-    due.sort((a, b) => retrievability(a, today) - retrievability(b, today));
-    if (body.origin === "deck") {
-      return Promise.all(due.map((row) => this.get(userId, row.id)));
-    }
-
-    const [settings] = await this.db
-      .select({
-        limit: userSettings.newCardsPerDay,
-        paused: userSettings.newCardsPaused,
-      })
-      .from(userSettings)
-      .where(eq(userSettings.userId, userId));
-    const [studied] = await this.db
-      .select({ value: count() })
-      .from(reviews)
-      .where(
-        and(
-          eq(reviews.userId, userId),
-          eq(reviews.reviewedOn, today),
-          eq(reviews.kind, "rating"),
-          eq(reviews.affectsSchedule, true),
-          eq(reviews.prevState, State.New)
-        )
-      );
-    const allowance = settings?.paused
-      ? 0
-      : Math.max(0, (settings?.limit ?? 0) - (studied?.value ?? 0));
-    const fresh = allowance
-      ? await this.db
-          .select({ id: cards.id })
-          .from(cards)
-          .innerJoin(decks, eq(decks.id, cards.deckId))
-          .where(
-            and(
-              this.liveCards(userId),
-              isNull(decks.deletedAt),
-              eq(cards.state, State.New)
-            )
-          )
-          .orderBy(asc(cards.newQueuedAt), asc(cards.id))
-          .limit(allowance)
-      : [];
-    return Promise.all(
-      [...due, ...fresh].map((row) => this.get(userId, row.id))
-    );
+    const { due, fresh } = await dailyReview(this.db, userId, today);
+    // A Deck's share of the Daily Review is its due Cards only: New Cards come in the whole one.
+    const queue =
+      body.origin === "deck"
+        ? due.filter((card) => card.deckId === body.deckId)
+        : [...due, ...fresh];
+    return Promise.all(queue.map((card) => this.get(userId, card.id)));
   }
 
   create(userId: string, body: CreateCardBody) {

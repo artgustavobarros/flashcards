@@ -41,6 +41,12 @@ Labels (`/api/labels`) can't share a name, even with other accents, case or spac
 
 Images are uploaded with `POST /api/images` (multipart, field `file`, PNG/JPG/WebP/GIF up to 5 MB, type read from the bytes) and saved under `UPLOADS_DIR/<user id>/`. `GET /api/images/<file>` only looks in the signed-in user's folder, which is the owner check.
 
+## Início and the Daily Review
+
+`GET /api/today` is what Início and the bell show: the Day's status (`empty`, `open`, `seen`, `completed`, `free`), today's counts (reviews, New Cards, overdue, done, remaining), tomorrow's count, the bell's dot and up to four recent Decks with their share. The Daily Review is always computed from the Cards (`apps/api/src/scheduling/daily-review.ts`); `user_days` only keeps the Day's marks: completed (written by the Rating that empties the Daily Review, the base of the Streak), seen and bell opened.
+
+`POST /api/today/seen` marks the Day as seen and `DELETE` undoes it. `POST /api/today/bell` clears the dot. `PATCH /api/settings` with `{ "newCardsPaused": true }` pauses New Cards: the pause lasts until a Day starts with nothing overdue.
+
 ## Scripts
 
 | Command          | What it does                                  |

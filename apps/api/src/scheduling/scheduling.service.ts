@@ -4,10 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { State } from "ts-fsrs";
 import { DB, type Db } from "../db/db.module.js";
-import { cards, reviews, userSettings } from "../db/domain-schema.js";
+import { cards, reviews, userDays, userSettings } from "../db/domain-schema.js";
+import { dailyReview } from "./daily-review.js";
 import {
   NEW_SCHEDULE,
   nextSchedule,
@@ -94,6 +95,7 @@ export class SchedulingService {
         reviewedOn: today,
         userId,
       });
+      await this.completeIfDone(tx, userId, today, now);
       return { affectsSchedule, reviewId, schedule: next };
     });
   }
@@ -144,8 +146,37 @@ export class SchedulingService {
         .set(schedule)
         .where(and(eq(cards.id, latest.cardId), eq(cards.userId, userId)));
       await tx.delete(reviews).where(eq(reviews.id, latest.id));
+      // The Rating that completed the Day takes the completion with it.
+      await tx
+        .update(userDays)
+        .set({ completedAt: null })
+        .where(
+          and(
+            eq(userDays.userId, userId),
+            eq(userDays.day, latest.reviewedOn),
+            gte(userDays.completedAt, latest.reviewedAt)
+          )
+        );
       return { cardId: latest.cardId, schedule };
     });
+  }
+
+  // The Daily Review is complete once a Rating leaves nothing in it, which is what the Streak
+  // counts. A Day that reopens later (Cards written, a higher limit) keeps its completion.
+  async completeIfDone(db: Db | Tx, userId: string, today: Day, now: Date) {
+    const { due, fresh } = await dailyReview(db, userId, today);
+    if (due.length + fresh.length) {
+      return;
+    }
+    await db
+      .insert(userDays)
+      .values({ completedAt: now, day: today, userId })
+      .onConflictDoUpdate({
+        set: {
+          completedAt: sql`coalesce(${userDays.completedAt}, excluded.completed_at)`,
+        },
+        target: [userDays.userId, userDays.day],
+      });
   }
 
   private async lockCard(
