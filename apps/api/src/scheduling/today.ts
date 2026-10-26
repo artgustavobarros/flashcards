@@ -24,3 +24,13 @@ export const toDay = (date: Date): Day => date.toISOString().slice(0, 10);
 
 export const addDays = (day: Day, days: number): Day =>
   toDay(new Date(dayStart(day).getTime() + days * MS_PER_DAY));
+
+// The time of day on the user's clock, as 'HH:MM'.
+export function localTime(now: Date, timeZone: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    timeZone,
+  }).format(now);
+}

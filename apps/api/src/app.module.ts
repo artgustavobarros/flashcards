@@ -8,9 +8,11 @@ import { HealthController } from "./health/health.controller.js";
 import { ImagesModule } from "./images/images.module.js";
 import { LabelsModule } from "./labels/labels.module.js";
 import { SchedulingModule } from "./scheduling/scheduling.module.js";
+import { SettingsController } from "./settings/settings.controller.js";
+import { TodayModule } from "./today/today.module.js";
 
 @Module({
-  controllers: [HealthController],
+  controllers: [HealthController, SettingsController],
   imports: [
     DbModule,
     AuthModule,
@@ -20,6 +22,7 @@ import { SchedulingModule } from "./scheduling/scheduling.module.js";
     LabelsModule,
     CommentsModule,
     ImagesModule,
+    TodayModule,
   ],
 })
 export class AppModule {}
