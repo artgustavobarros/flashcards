@@ -199,7 +199,7 @@ function Page() {
             </Link>
           </Button>
           <Button asChild className="w-full sm:w-auto" variant="link">
-            <Link to="/progresso">
+            <Link search={{ deck: deckId }} to="/progresso">
               Ver progresso
               <ArrowRight data-icon="inline-end" />
             </Link>

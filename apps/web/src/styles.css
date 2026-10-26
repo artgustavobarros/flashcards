@@ -10,6 +10,8 @@
 @theme inline {
   --font-sans: var(--font-body);
   --font-heading: var(--font-display);
+  --color-chart-err: var(--chart-err);
+  --color-chart-ok: var(--chart-ok);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -75,6 +77,9 @@
   --border: hsl(240 5.9% 90%);
   --input: hsl(240 5.9% 88%);
   --ring: hsl(152 42% 32%);
+  /* Charts: right (green) and Errei (soft coral), checked for color blindness in the prototype. */
+  --chart-ok: hsl(152 60% 36%);
+  --chart-err: hsl(6 65% 70%);
 }
 
 .dark {
@@ -103,6 +108,8 @@
   --border: hsl(240 3.7% 15.9%);
   --input: hsl(240 3.7% 20%);
   --ring: hsl(148 40% 55%);
+  --chart-ok: hsl(146 50% 46%);
+  --chart-err: hsl(6 45% 45%);
 }
 
 @layer base {

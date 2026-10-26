@@ -12,6 +12,8 @@ import {
   imageResponseSchema,
   labelResponseSchema,
   labelsResponseSchema,
+  type ProgressQuery,
+  progressResponseSchema,
   type RatingBody,
   ratingResponseSchema,
   resetResponseSchema,
@@ -72,6 +74,15 @@ export const openBell = () => send("/api/today/bell", { method: "POST" });
 // Only the fields sent change.
 export async function updateSettings(body: SettingsBody) {
   await sendJson("PATCH", "/api/settings", body);
+}
+
+// Progresso, for one Deck or all of them.
+export function getProgress(query: ProgressQuery) {
+  const params = new URLSearchParams({ period: query.period });
+  if (query.deckId) {
+    params.set("deckId", query.deckId);
+  }
+  return getJson(`/api/progress?${params}`, progressResponseSchema);
 }
 
 export const getDecks = () => getJson("/api/decks", decksResponseSchema);
