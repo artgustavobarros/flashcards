@@ -48,6 +48,12 @@ export function dueBadge(card: Schedule, today: string) {
   return days === 0 ? { label: "Vencido hoje", tone: "today" as const } : null;
 }
 
+// "25 de out."
+export function dayLabel(day: string) {
+  const date = dayDate(day);
+  return `${date.getUTCDate()} de ${MONTHS[date.getUTCMonth()]}.`;
+}
+
 // "Próxima revisão" on the Card page.
 export function nextReviewText(card: Schedule, today: string) {
   if (card.state === "new" || !card.due) {

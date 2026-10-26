@@ -9,15 +9,16 @@ import {
   createCardResponseSchema,
   deckResponseSchema,
   decksResponseSchema,
-  healthSchema,
   imageResponseSchema,
   labelResponseSchema,
   labelsResponseSchema,
   type RatingBody,
   ratingResponseSchema,
   resetResponseSchema,
+  type SettingsBody,
   type StudyQueueBody,
   studyQueueResponseSchema,
+  todayResponseSchema,
   type UpdateCardBody,
   undoResponseSchema,
 } from "@daruma/shared";
@@ -58,8 +59,19 @@ const sendJson = (method: "POST" | "PATCH", path: string, body: unknown) =>
     method,
   });
 
-export function getHealth() {
-  return getJson("/api/health", healthSchema);
+// Today's Daily Review, for Início and the bell.
+export const getToday = () => getJson("/api/today", todayResponseSchema);
+
+// "Marcar como vista", or its toast's "Desfazer" with seen = false.
+export const markSeen = (seen: boolean) =>
+  send("/api/today/seen", { method: seen ? "POST" : "DELETE" });
+
+// Clears the bell's dot.
+export const openBell = () => send("/api/today/bell", { method: "POST" });
+
+// Only the fields sent change.
+export async function updateSettings(body: SettingsBody) {
+  await sendJson("PATCH", "/api/settings", body);
 }
 
 export const getDecks = () => getJson("/api/decks", decksResponseSchema);
