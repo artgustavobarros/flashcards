@@ -7,6 +7,7 @@ import { DecksModule } from "./decks/decks.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { ImagesModule } from "./images/images.module.js";
 import { LabelsModule } from "./labels/labels.module.js";
+import { ProgressModule } from "./progress/progress.module.js";
 import { SchedulingModule } from "./scheduling/scheduling.module.js";
 import { SettingsController } from "./settings/settings.controller.js";
 import { TodayModule } from "./today/today.module.js";
@@ -23,6 +24,7 @@ import { TodayModule } from "./today/today.module.js";
     CommentsModule,
     ImagesModule,
     TodayModule,
+    ProgressModule,
   ],
 })
 export class AppModule {}

@@ -47,6 +47,12 @@ Images are uploaded with `POST /api/images` (multipart, field `file`, PNG/JPG/We
 
 `POST /api/today/seen` marks the Day as seen and `DELETE` undoes it. `POST /api/today/bell` clears the dot. `PATCH /api/settings` with `{ "newCardsPaused": true }` pauses New Cards: the pause lasts until a Day starts with nothing overdue.
 
+## Progresso
+
+`GET /api/progress?period=7|30|90|all&deckId=` feeds the Progresso tab: each Day of the period with its Ratings and Errei (Deck filter applied) and its mark for the Streak, the Streak itself (current and best, across every Deck), Cards due on each of the next 7 Days, Card States and every Deck with its share of today and its Ratings in the period. `all` starts at the first Rating. Only Ratings that went through FSRS count, on live Cards in live Decks.
+
+A Day is `completed` or `seen` from `user_days`. Otherwise it was `missed` if a Card was due on it and still due the next Day, which the Rating log tells (each row keeps the Card's due day from before it), and `free` if not. Today is `pending` while Cards remain. Seen and free Days neither break nor extend the Streak.
+
 ## Scripts
 
 | Command          | What it does                                  |
