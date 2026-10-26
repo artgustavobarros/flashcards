@@ -11,11 +11,12 @@ import {
   getDeck,
   getDecks,
   getLabels,
+  getToday,
 } from "~/lib/api";
 
-// Keys: ["decks"] for every Deck query, ["cards"] for every Card query, ["labels"] for Labels.
-// Any change to a Card moves Deck and Label counts too, so mutations refresh all three
-// (see refreshLibrary).
+// Keys: ["decks"] for every Deck query, ["cards"] for every Card query, ["labels"] for Labels,
+// ["today"] for today's Daily Review. Any change to a Card moves the others' counts too, so
+// mutations refresh all four (see refreshLibrary).
 export const decksQuery = queryOptions({
   queryFn: getDecks,
   queryKey: ["decks"],
@@ -53,10 +54,18 @@ export const cardQuery = (id: string) =>
     queryKey: ["cards", id],
   });
 
+// Polled, so the bell's dot shows up at the Review Time without a reload.
+export const todayQuery = queryOptions({
+  queryFn: getToday,
+  queryKey: ["today"],
+  refetchInterval: 60_000,
+});
+
 export function refreshLibrary(queryClient: QueryClient) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ["decks"] }),
     queryClient.invalidateQueries({ queryKey: ["cards"] }),
     queryClient.invalidateQueries({ queryKey: ["labels"] }),
+    queryClient.invalidateQueries({ queryKey: ["today"] }),
   ]);
 }
