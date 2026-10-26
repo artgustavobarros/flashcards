@@ -12,6 +12,7 @@ import {
   getDecks,
   getLabels,
   getProgress,
+  getSettings,
   getToday,
 } from "~/lib/api";
 
@@ -67,6 +68,11 @@ export const progressQuery = (query: ProgressQuery) =>
     queryFn: () => getProgress(query),
     queryKey: ["progress", query],
   });
+
+export const settingsQuery = queryOptions({
+  queryFn: getSettings,
+  queryKey: ["settings"],
+});
 
 export function refreshLibrary(queryClient: QueryClient) {
   return Promise.all([

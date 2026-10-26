@@ -3,6 +3,7 @@ import {
   deleteAccountBodySchema,
   type SettingsBody,
   settingsBodySchema,
+  settingsResponseSchema,
 } from "@daruma/shared";
 import {
   Body,
@@ -26,7 +27,9 @@ export class SettingsController {
 
   @Get()
   async get(@CurrentSession() { user }: AuthSession) {
-    return { settings: await this.settings.get(user.id) };
+    return settingsResponseSchema.parse({
+      settings: await this.settings.get(user.id),
+    });
   }
 
   // Only the fields sent change.

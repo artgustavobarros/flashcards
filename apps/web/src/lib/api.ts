@@ -19,6 +19,7 @@ import {
   resetResponseSchema,
   type SettingsBody,
   type StudyQueueBody,
+  settingsResponseSchema,
   studyQueueResponseSchema,
   todayResponseSchema,
   type UpdateCardBody,
@@ -74,6 +75,17 @@ export const openBell = () => send("/api/today/bell", { method: "POST" });
 // Only the fields sent change.
 export async function updateSettings(body: SettingsBody) {
   await sendJson("PATCH", "/api/settings", body);
+}
+
+export const getSettings = () =>
+  getJson("/api/settings", settingsResponseSchema);
+
+export async function deleteAccount(email: string) {
+  await send("/api/settings/account", {
+    body: JSON.stringify({ email }),
+    headers: { "Content-Type": "application/json" },
+    method: "DELETE",
+  });
 }
 
 // Progresso, for one Deck or all of them.
