@@ -56,6 +56,10 @@ export const cardQuery = (id: string) =>
     queryKey: ["cards", id],
   });
 
+export function refreshCard(queryClient: QueryClient, cardId: string) {
+  return queryClient.fetchQuery(cardQuery(cardId));
+}
+
 // Polled, so the bell's dot shows up at the Review Time without a reload.
 export const todayQuery = queryOptions({
   queryFn: getToday,
