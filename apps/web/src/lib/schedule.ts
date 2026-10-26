@@ -1,8 +1,8 @@
 import type { Card, CardListItem, CardState } from "@daruma/shared";
 
 const MS_PER_DAY = 86_400_000;
-const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-const MONTHS = [
+export const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+export const MONTHS = [
   "jan",
   "fev",
   "mar",
@@ -27,7 +27,7 @@ export const plural = (count: number, one: string, many: string) =>
   `${count} ${count === 1 ? one : many}`;
 
 // Days are 'YYYY-MM-DD' on the user's calendar; `today` comes from the API.
-const dayDate = (day: string) => new Date(`${day}T00:00:00Z`);
+export const dayDate = (day: string) => new Date(`${day}T00:00:00Z`);
 const daysBetween = (from: string, to: string) =>
   Math.round((dayDate(to).getTime() - dayDate(from).getTime()) / MS_PER_DAY);
 

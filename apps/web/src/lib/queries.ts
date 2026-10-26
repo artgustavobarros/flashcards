@@ -1,4 +1,4 @@
-import type { CardsQuery } from "@daruma/shared";
+import type { CardsQuery, ProgressQuery } from "@daruma/shared";
 import {
   keepPreviousData,
   type QueryClient,
@@ -11,12 +11,13 @@ import {
   getDeck,
   getDecks,
   getLabels,
+  getProgress,
   getToday,
 } from "~/lib/api";
 
 // Keys: ["decks"] for every Deck query, ["cards"] for every Card query, ["labels"] for Labels,
-// ["today"] for today's Daily Review. Any change to a Card moves the others' counts too, so
-// mutations refresh all four (see refreshLibrary).
+// ["today"] for today's Daily Review, ["progress"] for Progresso. Any change to a Card moves the
+// others' counts too, so mutations refresh all five (see refreshLibrary).
 export const decksQuery = queryOptions({
   queryFn: getDecks,
   queryKey: ["decks"],
@@ -61,11 +62,18 @@ export const todayQuery = queryOptions({
   refetchInterval: 60_000,
 });
 
+export const progressQuery = (query: ProgressQuery) =>
+  queryOptions({
+    queryFn: () => getProgress(query),
+    queryKey: ["progress", query],
+  });
+
 export function refreshLibrary(queryClient: QueryClient) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ["decks"] }),
     queryClient.invalidateQueries({ queryKey: ["cards"] }),
     queryClient.invalidateQueries({ queryKey: ["labels"] }),
     queryClient.invalidateQueries({ queryKey: ["today"] }),
+    queryClient.invalidateQueries({ queryKey: ["progress"] }),
   ]);
 }
